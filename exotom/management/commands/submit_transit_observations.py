@@ -13,35 +13,38 @@ from astropy.time import Time
 import pytz
 
 
-
 class Command(BaseCommand):
     help = 'Submit all transits that can be observed in the following night to telescope scheduler.'
 
     def handle(self, *args, **options):
-        now = Time.now()
+        submit_all_transits()
 
-        targets = Target.objects.all()
 
-        sites_instrument_types = FACILITIES['IAGTransit']['instruments']
+def submit_all_transits():
+    now = Time.now()
 
-        instruments = get_instruments()
+    targets = Target.objects.all()
 
-        for target in targets:
+    sites_instrument_types = FACILITIES['IAGTransit']['instruments']
 
-            calculate_transits_during_next_n_days(target, n_days=1)
+    instruments = get_instruments()
 
-            transits_for_target = Transit.objects.filter(target=target, start__gt=now.datetime.astimezone(pytz.utc))
+    for target in targets:
 
-            for site_name, instrument_type in sites_instrument_types.items():
-                instrument = instruments[instrument_type]
+        calculate_transits_during_next_n_days(target, n_days=1)
 
-                for transit in transits_for_target:
-                    if transit.observable_at_site(site=site_name):
-                        try:
-                            submit_transit_to_instrument(transit, instrument_type, instrument)
-                        except Exception as e:
-                            print(f"Error when submitting transit observation to instrument")
-                            print(traceback.format_exc())
+        transits_for_target = Transit.objects.filter(target=target, start__gt=now.datetime.astimezone(pytz.utc))
+
+        for site_name, instrument_type in sites_instrument_types.items():
+            instrument = instruments[instrument_type]
+
+            for transit in transits_for_target:
+                if transit.observable_at_site(site=site_name):
+                    try:
+                        submit_transit_to_instrument(transit, instrument_type, instrument)
+                    except Exception as e:
+                        print(f"Error when submitting transit observation to instrument")
+                        print(traceback.format_exc())
 
 
 def submit_transit_to_instrument(transit: Transit, instrument_type: str, instrument: dict):
