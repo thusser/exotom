@@ -11,10 +11,10 @@ app.config_from_object('django.conf:settings')
 app.autodiscover_tasks()
 
 # run calculate_transits every day
-#app.conf.beat_schedule = {
-#    # Executes every day at midnight
-#    'calc-transits': {
-#        'task': 'exotom.tasks.calculate_transits',
-#        'schedule': crontab(hour=0, minute=0)
-#    }
-#}
+app.conf.beat_schedule = {
+    # Executes every day at midnight
+    'calc-transits': {
+        'task': 'exotom.tasks.update',
+        'schedule': crontab(hour=15, minute=0)
+    }
+}
