@@ -77,3 +77,10 @@ python manage.py createsuperuser
 ```
 python manage.py runserver
 ```
+
+## Git hooks
+
+Install pre-commit hook through python package pre-commit
+```
+pre-commit install
+```
