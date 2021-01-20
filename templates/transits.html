@@ -1,0 +1,48 @@
+{% extends 'tom_common/base.html' %}
+{% load targets_extras %}
+{% block title %}Transits{% endblock %}
+{% block content %}
+
+    <h2>Observable transits within next 10 days</h2>
+    <table class="table table-sm table-hover table-striped" style="text-align: center; font-size: small">
+        <thead class="thead-light">
+        <tr>
+            <th>Target</th>
+            <th>Mag</th>
+            <th>Depth</th>
+            <th>#</th>
+            <th>err</th>
+            <th>Start</th>
+            <th>Mid-transit</th>
+            <th>End</th>
+        </tr>
+        <tr>
+            <th>&nbsp;</th>
+            <th>&nbsp;</th>
+            <th>[mmag]</th>
+            <th>&nbsp;</th>
+            <th>[min]</th>
+            <th>[UT]</th>
+            <th>[UT]</th>
+            <th>[UT]</th>
+        </tr>
+        </thead>
+        {% for transit in transits %}
+            {% if transit.facilities %}
+                <tr>
+                    <td><a href="{% url 'targets:detail' transit.target.id %}">{{ transit.target.name }}</a></td>
+                    <td>{{ transit.mag|floatformat:2 }}</td>
+                    <td>{{ transit.depth|floatformat:2 }}</td>
+                    <td><a href="{% url 'transitobservationdetails' transit.target.id transit.number %}">
+                        {{ transit.number }}
+                    </a></td>
+                    <td>{{ transit.uncertainty|floatformat:0 }}</td>
+                    <td>{{ transit.start|date:"H:i:s" }}</td>
+                    <td><strong>{{ transit.mid|date:"M d, H:i:s" }}</strong></td>
+                    <td>{{ transit.end|date:"H:i:s" }}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+
+{% endblock %}

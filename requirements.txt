@@ -1,0 +1,8 @@
+wheel
+tomtoolkit >= 2.0.0
+pandas
+gunicorn
+celery
+psycopg2-binary
+django-celery-beat
+redis

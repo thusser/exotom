@@ -1,0 +1,5 @@
+{% for site in sites %}
+    <a href="{% url 'tom_observations:create' facility=facility %}?target_id={{ target.id }}&transit={{ transit.number }}&instrument_type={{ site.1 }}"
+       class="btn btn-sm btn-outline-success">{{ site.2 }}</a>
+    <a class="btn btn-sm" href="#"></a>
+{% endfor %}

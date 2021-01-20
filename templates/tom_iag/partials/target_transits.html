@@ -1,0 +1,33 @@
+{% load bootstrap4 observation_extras_exo %}
+<table class="table table-hover">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Start</th>
+        <th>Mid [UT]</th>
+        <th>End</th>
+        <th>Observe</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for transit in prediction %}
+        <tr class="{% if transit.facilities %}text-success{% else %}text-muted{% endif %}">
+            <td><a href="{% url 'transitobservationdetails' transit.target.id transit.number %}">
+                {{ transit.number }}
+            </a></td>
+            <td>{{ transit.start|date:"H:i:s" }}</td>
+            <td><strong>{{ transit.mid|date:"M d, H:i:s" }}</strong></td>
+            <td>{{ transit.end|date:"H:i:s" }}</td>
+            <td>
+                {% transit_observing_buttons transit %}
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="5">
+                No transits found.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,108 @@
+{% extends 'tom_common/base.html' %}
+{% load targets_extras %}
+{% block title %}Transit details{% endblock %}
+{% block content %}
+
+    <h2>
+        Details for transit #{{ transit.number }} of target
+        <a href="{% url 'targets:detail' transit.target.id %}">{{ transit.target.name }}</a>
+    </h2>
+
+    <h3>Target</h3>
+    <p>
+        <strong>Epoch: </strong>
+        {{ transit.target|target_extra_field:"Epoch (BJD)"|floatformat:6 }} &pm;
+        {{ transit.target|target_extra_field:"Epoch (BJD) err"|floatformat:6 }} JD
+    </p>
+    <p>
+        <strong>Period: </strong>
+        {{ transit.target|target_extra_field:"Period (days)"|floatformat:6 }} &pm;
+        {{ transit.target|target_extra_field:"Period (days) err"|floatformat:6 }} days
+    </p>
+    <p>
+        <strong>Depth: </strong>
+        {{ transit.target|target_extra_field:"Depth (mmag)"|floatformat:2 }} &pm;
+        {{ transit.target|target_extra_field:"Depth (mmag) err"|floatformat:2 }} mmag
+    </p>
+
+    <h3>Times</h3>
+    <p><strong>Prediction error for this transit:</strong> {{ uncertainty|floatformat:2 }} mins</p>
+    <table class="table table-borderless table-hover center">
+        <tr>
+            <th>&nbsp;</th>
+            <th>Start</th>
+            <th>Middle</th>
+            <th>End</th>
+        </tr>
+        <tbody style="border-top: 1px solid black">
+        <tr>
+            <th>Earliest</th>
+            <td>{{ times.start.earliest|date:"H:i:s" }}</td>
+            <td>{{ times.mid.earliest|date:"M d, H:i:s" }}</td>
+            <td>{{ times.end.earliest|date:"H:i:s" }}</td>
+        </tr>
+        <tr>
+            <th>Predicted</th>
+            <td><strong>{{ transit.start|date:"H:i:s" }}</strong></td>
+            <td><strong>{{ transit.mid|date:"M d, H:i:s" }}</strong></td>
+            <td><strong>{{ transit.end|date:"H:i:s" }}</strong></td>
+        </tr>
+        <tr>
+            <th>Latest</th>
+            <td>{{ times.start.latest|date:"H:i:s" }}</td>
+            <td>{{ times.mid.latest|date:"M d, H:i:s" }}</td>
+            <td>{{ times.end.latest|date:"H:i:s" }}</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h3>Observatories</h3>
+    <p>(for predicted times)</p>
+    <table class="table table-borderless table-hover center">
+        <tr>
+            <th>Site</th>
+            <th>Facility</th>
+            <th>&nbsp;</th>
+            <th>Start</th>
+            <th>Middle</th>
+            <th>End</th>
+        </tr>
+        {% for details in transit.details %}
+            <tbody {% if details.observable %}class="text-success"{% endif %} style="border-top: 1px solid black">
+            <tr>
+                <th>{{ details.site }}</th>
+                <th>{{ details.facility }}</th>
+                <td>Target Altitude</td>
+                <td>{{ details.target_alt_start|floatformat:1 }}°</td>
+                <td>{{ details.target_alt_mid|floatformat:1 }}°</td>
+                <td>{{ details.target_alt_end|floatformat:1 }}°</td>
+            </tr>
+            <tr>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+                <td>Sun Altitude</td>
+                <td>&nbsp;</td>
+                <td>{{ details.sun_alt_mid|floatformat:1 }}°</td>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+                <td>Moon Altitude</td>
+                <td>&nbsp;</td>
+                <td>{{ details.moon_alt_mid|floatformat:1 }}°</td>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+                <td>Moon Distance</td>
+                <td>&nbsp;</td>
+                <td>{{ details.moon_dist_mid|floatformat:1 }}°</td>
+                <td>&nbsp;</td>
+            </tr>
+            </tbody>
+        {% endfor %}
+    </table>
+
+{% endblock %}
