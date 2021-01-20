@@ -15,29 +15,43 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
     now = Time.now()
 
     # remove all future transits
-    Transit.objects.filter(target=target, start__gt=now.datetime.astimezone(pytz.utc)).delete()
+    Transit.objects.filter(
+        target=target, start__gt=now.datetime.astimezone(pytz.utc)
+    ).delete()
 
     # got epoch and period?
-    if 'Epoch (BJD)' not in target.extra_fields or target.extra_fields['Epoch (BJD)'] is None or \
-            'Period (days)' not in target.extra_fields or target.extra_fields['Period (days)'] is None or \
-            'Duration (hours)' not in target.extra_fields or target.extra_fields['Duration (hours)'] is None:
+    if (
+        "Epoch (BJD)" not in target.extra_fields
+        or target.extra_fields["Epoch (BJD)"] is None
+        or "Period (days)" not in target.extra_fields
+        or target.extra_fields["Period (days)"] is None
+        or "Duration (hours)" not in target.extra_fields
+        or target.extra_fields["Duration (hours)"] is None
+    ):
         return
 
     # create observers
-    observers = {code: Observer(latitude=site['latitude'] * u.deg, longitude=site['longitude'] * u.deg,
-                                elevation=site['elevation'] * u.m) for code, site in
-                 IAGTransitFacility.SITES.items()}
+    observers = {
+        code: Observer(
+            latitude=site["latitude"] * u.deg,
+            longitude=site["longitude"] * u.deg,
+            elevation=site["elevation"] * u.m,
+        )
+        for code, site in IAGTransitFacility.SITES.items()
+    }
 
     # get coordinates
     coords = SkyCoord(target.ra * u.deg, target.dec * u.deg)
 
     # parse epoch
-    epoch = Time(target.extra_fields['Epoch (BJD)'], format='jd', scale='tdb')
-    period = target.extra_fields['Period (days)'] * u.day
-    duration = target.extra_fields['Duration (hours)'] * u.hour
+    epoch = Time(target.extra_fields["Epoch (BJD)"], format="jd", scale="tdb")
+    period = target.extra_fields["Period (days)"] * u.day
+    duration = target.extra_fields["Duration (hours)"] * u.hour
 
     # create system
-    system = EclipsingSystem(primary_eclipse_time=epoch.utc, orbital_period=period, duration=duration)
+    system = EclipsingSystem(
+        primary_eclipse_time=epoch.utc, orbital_period=period, duration=duration
+    )
 
     # find eclipses within next 10 days
     obstime = now
@@ -51,8 +65,8 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
             break
 
         # get start and end times
-        start = (eclipse - duration / 2)
-        end = (eclipse + duration / 2)
+        start = eclipse - duration / 2
+        end = eclipse + duration / 2
 
         # should not have started yet
         if start > now:
@@ -72,7 +86,7 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
 
                 # fill details
                 details.transit = transit
-                details.facility = 'IAGTransit'
+                details.facility = "IAGTransit"
                 details.site = site
 
                 # save
@@ -88,17 +102,17 @@ def create_transit_details(observer, coords, start, mid, end):
 
     # get position of sun and moon
     sun = {
-        'start': observer.sun_altaz(start - margin),
-        'mid': observer.sun_altaz(mid),
-        'end': observer.sun_altaz(end + margin),
+        "start": observer.sun_altaz(start - margin),
+        "mid": observer.sun_altaz(mid),
+        "end": observer.sun_altaz(end + margin),
     }
     moon = observer.moon_altaz(mid)
 
     # position of target
     target = {
-        'start': observer.altaz(start - margin, coords),
-        'mid': observer.altaz(mid, coords),
-        'end': observer.altaz(end + margin, coords),
+        "start": observer.altaz(start - margin, coords),
+        "mid": observer.altaz(mid, coords),
+        "end": observer.altaz(end + margin, coords),
     }
 
     # coords to altaz at mid-transit
@@ -106,17 +120,23 @@ def create_transit_details(observer, coords, start, mid, end):
 
     # create new TransitSite and fill it
     details = TransitObservationDetails()
-    details.target_alt_start = target['start'].alt.degree
-    details.target_alt_mid = target['mid'].alt.degree
-    details.target_alt_end = target['end'].alt.degree
-    details.sun_alt_mid = sun['mid'].alt.degree
+    details.target_alt_start = target["start"].alt.degree
+    details.target_alt_mid = target["mid"].alt.degree
+    details.target_alt_end = target["end"].alt.degree
+    details.sun_alt_mid = sun["mid"].alt.degree
     details.moon_alt_mid = moon.alt.degree
     details.moon_dist_mid = alt_az.separation(moon).degree
 
     # decide, whether it's observable
-    details.observable = details.target_alt_start > 30 and details.target_alt_mid > 30 and details.target_alt_end > 30 and \
-        sun['start'].alt.degree < -12 and details.sun_alt_mid < -12 and sun['end'].alt.degree < -12 and \
-        details.moon_dist_mid > 30
+    details.observable = (
+        details.target_alt_start > 30
+        and details.target_alt_mid > 30
+        and details.target_alt_end > 30
+        and sun["start"].alt.degree < -12
+        and details.sun_alt_mid < -12
+        and sun["end"].alt.degree < -12
+        and details.moon_dist_mid > 30
+    )
 
     # return it
     return details
