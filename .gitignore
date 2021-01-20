@@ -1,5 +1,6 @@
 local_settings.py
 db.sqlite3
 venv
+exotom_env
 .idea
 __pycache__
