@@ -10,11 +10,11 @@ app.config_from_object('django.conf:settings')
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
-# run calculate_transits every day
-#app.conf.beat_schedule = {
-#    # Executes every day at midnight
-#    'calc-transits': {
-#        'task': 'exotom.tasks.calculate_transits',
-#        'schedule': crontab(hour=0, minute=0)
-#    }
-#}
+# run update every day
+app.conf.beat_schedule = {
+    # Executes every day at 15:00
+    'update': {
+        'task': 'exotom.tasks.update',
+        'schedule': crontab(hour=15, minute=0)
+    }
+}
