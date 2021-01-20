@@ -3,7 +3,7 @@
 ## Project local dev setup
 Clone exotom repo
 ```
-git clone https://gitlab.gwdg.de/monet/exotom.git
+git clone https://github.com/thusser/exotom.git
 cd exotom
 ```
 
@@ -28,8 +28,8 @@ cd ..
 pip install -r requirements.txt
 ```
 
-### local settings
-For local development reate `local_settings.py` at top-level of project with following content (fill in your observation portal api key)
+### local_settings
+For local development create `local_settings.py` at top-level of project with following content (fill in your observation portal api key)
 ```
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -73,7 +73,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### run dev server
+### Run dev server
 ```
 python manage.py runserver
 ```
