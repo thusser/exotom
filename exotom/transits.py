@@ -8,6 +8,7 @@ from tom_observations.facility import get_service_classes
 
 from exotom.models import Transit, Target, TransitObservationDetails
 from exotom.ofi.iagtransit import IAGTransitFacility
+from exotom.settings import SITES
 
 
 def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
@@ -82,12 +83,9 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
             # loop facilities
             for site, observer in observers.items():
                 # create transit details
-                details = create_transit_details(observer, coords, start, eclipse, end)
-
-                # fill details
-                details.transit = transit
-                details.facility = "IAGTransit"
-                details.site = site
+                details = create_transit_details(
+                    transit, observer, coords, start, eclipse, end, site
+                )
 
                 # save
                 details.save()
@@ -96,7 +94,7 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
         obstime = eclipse + TimeDelta(5 * u.minute)
 
 
-def create_transit_details(observer, coords, start, mid, end):
+def create_transit_details(transit: Transit, observer, coords, start, mid, end, site):
     # margin
     margin = 25 * u.min
 
@@ -127,8 +125,8 @@ def create_transit_details(observer, coords, start, mid, end):
     details.moon_alt_mid = moon.alt.degree
     details.moon_dist_mid = alt_az.separation(moon).degree
 
-    # decide, whether it's observable
-    details.observable = (
+    # decide, whether it's visible
+    details.visible = (
         details.target_alt_start > 30
         and details.target_alt_mid > 30
         and details.target_alt_end > 30
@@ -137,6 +135,22 @@ def create_transit_details(observer, coords, start, mid, end):
         and sun["end"].alt.degree < -12
         and details.moon_dist_mid > 30
     )
+
+    transit_observation_constraints_at_site = SITES[site][
+        "transitObservationConstraints"
+    ]
+    # decide, whether it's observable
+    details.observable = (
+        details.visible
+        and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
+        and transit.depth
+        >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
+    )
+
+    # fill details
+    details.transit = transit
+    details.facility = "IAGTransit"
+    details.site = site
 
     # return it
     return details

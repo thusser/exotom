@@ -2,7 +2,7 @@ import traceback
 
 from django.core.management.base import BaseCommand
 
-from exotom.settings import FACILITIES
+from exotom.settings import FACILITIES, SITES
 from exotom.ofi.iagtransit import IAGTransitForm
 from tom_iag.iag import IAGFacility, get_instruments
 from exotom.models import Target, Transit
@@ -25,8 +25,6 @@ def submit_all_transits():
 
     targets = Target.objects.all()
 
-    sites_instrument_types = FACILITIES["IAGTransit"]["instruments"]
-
     instruments = get_instruments()
 
     for target in targets:
@@ -37,14 +35,15 @@ def submit_all_transits():
             target=target, start__gt=now.datetime.astimezone(pytz.utc)
         )
 
-        for site_name, instrument_type in sites_instrument_types.items():
-            instrument = instruments[instrument_type]
+        for site_name, site_info in SITES.items():
+            instrument_type = site_info["instrument"]
+            instrument_details = instruments[instrument_type]
 
             for transit in transits_for_target:
                 if transit.observable_at_site(site=site_name):
                     try:
                         submit_transit_to_instrument(
-                            transit, instrument_type, instrument
+                            transit, instrument_type, instrument_details
                         )
                     except Exception as e:
                         print(
@@ -54,12 +53,24 @@ def submit_all_transits():
 
 
 def submit_transit_to_instrument(
-    transit: Transit, instrument_type: str, instrument: dict
+    transit: Transit, instrument_type: str, instrument_details: dict
 ):
     print(
         f"Submitting transit {transit} with transit id {transit.id} and target id {transit.target_id}"
     )
 
+    observation_data = get_observation_data(
+        transit, instrument_type, instrument_details
+    )
+    form = IAGTransitForm(initial=observation_data, data=observation_data)
+    form.is_valid()
+    facility = IAGFacility()
+    facility.submit_observation(form.observation_payload())
+
+
+def get_observation_data(
+    transit: Transit, instrument_type: str, instrument_details: dict
+) -> dict:
     magnitude = transit.target.targetextra_set.get(key="Mag (TESS)").float_value
     exposure_time = calculate_exposure_time(magnitude)
 
@@ -70,10 +81,7 @@ def submit_transit_to_instrument(
         "target_id": transit.target_id,
         "ipp_value": 1.05,
         "exposure_time": exposure_time,
-        "readout_mode": instrument["modes"]["readout"]["modes"][0]["code"],
-        "filter": instrument["optical_elements"]["filters"][0]["code"],
+        "readout_mode": instrument_details["modes"]["readout"]["modes"][0]["code"],
+        "filter": instrument_details["optical_elements"]["filters"][0]["code"],
     }
-    form = IAGTransitForm(initial=data, data=data)
-    form.is_valid()
-    facility = IAGFacility()
-    facility.submit_observation(form.observation_payload())
+    return data

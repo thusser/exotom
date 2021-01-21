@@ -28,20 +28,27 @@ class Transit(models.Model):
                 [
                     (td.facility, td.site)
                     for td in self.transitobservationdetails_set.all()
-                    if td.observable
+                    if td.visible
                 ]
             )
         )
 
-    def observable(self, facility):
+    def visible(self, facility):
         return any(
             [
-                td.observable
+                td.visible
                 for td in self.transitobservationdetails_set.filter(facility=facility)
             ]
         )
 
+    def visible_at_site(self, site):
+        """Checks if transit is in the sky at the given site."""
+        tds = self.transitobservationdetails_set.filter(site=site)
+        observable = any([td.visible for td in tds])
+        return observable
+
     def observable_at_site(self, site):
+        """Checks if transit is in the sky at the given site and whether star is bright enough and transit deep enough."""
         tds = self.transitobservationdetails_set.filter(site=site)
         observable = any([td.observable for td in tds])
         return observable
@@ -81,7 +88,10 @@ class TransitObservationDetails(models.Model):
     moon_alt_mid = models.FloatField("Elevation of moon at mid-transit.")
     moon_dist_mid = models.FloatField("Distance to moon at mid-transit.")
 
-    observable = models.BooleanField("Whether transit is observable")
+    visible = models.BooleanField("Whether transit is visible", null=True)
+    observable = models.BooleanField(
+        "Whether transit can be observed at this site", null=True
+    )
 
     class Meta:
         index_together = [

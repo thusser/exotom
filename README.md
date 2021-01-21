@@ -50,14 +50,29 @@ FACILITIES = {
         'instrument_type': '0M5 SBIG6303E',
         'proposal': 'exo',
     },
-    'IAGTransit': {
-        'instruments': {
-            'McDonald': '1M2 SBIG8300',
-            'Sutherland': '1M2 FLI230',
-            'Göttingen': '0M5 SBIG6303E'
+}
+
+SITES = {
+    'McDonald': {
+        'transitObservationConstraints': {
+            'maxMagnitude': 20,
+            'minTransitDepthInMmag': 1,
         },
-        'proposal': 'exo',
-        'max_airmass': 1.5
+        'instrument': '1M2 SBIG8300'
+    },
+    'Sutherland': {
+        'transitObservationConstraints': {
+            'maxMagnitude': 20,
+            'minTransitDepthInMmag': 1,
+        },
+        'instrument': '1M2 FLI230'
+    },
+    'Göttingen': {
+        'transitObservationConstraints': {
+            'maxMagnitude': 14,
+            'minTransitDepthInMmag': 1,
+        },
+        'instrument': '0M5 SBIG6303E'
     },
 }
 ```

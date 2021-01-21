@@ -77,7 +77,7 @@ class IAGTransitForm(IAGImagingObservationForm):
             [
                 (t.number, "#%d: %s" % (t.number, t.start.strftime("%Y/%m/%d %H:%M")))
                 for t in Transit.objects.filter(start__gt=Time.now().isot)
-                if t.observable(self.initial["facility"])
+                if t.visible(self.initial["facility"])
             ],
             key=lambda x: x[1],
         )

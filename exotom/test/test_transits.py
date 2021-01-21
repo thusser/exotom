@@ -134,5 +134,5 @@ class Test(TestCase):
         ):
             self.assertEqual(transit_observation_detail.site, exp_details["site"])
             self.assertEqual(
-                transit_observation_detail.observable, exp_details["observable"]
+                transit_observation_detail.visible, exp_details["observable"]
             )
