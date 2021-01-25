@@ -75,6 +75,8 @@ SITES = {
         'instrument': '0M5 SBIG6303E'
     },
 }
+
+PROPOSALS = {'priority' : 'exo', 'low_priority': 'exo_filler'}
 ```
 
 ### make django migrations
