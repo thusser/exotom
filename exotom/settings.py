@@ -251,7 +251,8 @@ ALERT_CREDENTIALS = {"TNS": {"api_key": ""}}
 #     {'name': 'dicovery_date', 'type': 'datetime'}
 # ]
 EXTRA_FIELDS = [
-    {"name": "Priority", "type": "number"},
+    {"name": "Inter Proposal Priority", "type": "number"},
+    {"name": "Priority Proposal", "type": "boolean"},  #
     {"name": "Mag (TESS)", "type": "number"},
     {"name": "Mag (TESS) err", "type": "number"},
     {"name": "Epoch (BJD)", "type": "number"},

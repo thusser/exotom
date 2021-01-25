@@ -2,7 +2,7 @@ from astropy.time import Time
 from crispy_forms.layout import Div, Layout
 from django import forms
 from dateutil.parser import parse
-from tom_targets.models import Target
+from tom_targets.models import Target, TargetExtra
 from django.conf import settings
 import astropy.units as u
 
@@ -17,6 +17,7 @@ from tom_iag.iag import (
 )
 from exotom.models import Transit
 
+from local_settings import PROPOSALS
 
 # Determine settings for this module.
 try:
@@ -150,13 +151,21 @@ class IAGTransitForm(IAGImagingObservationForm):
         except Transit.DoesNotExist:
             return {}
 
+        try:
+            is_priority = transit.target.targetextra_set.get(
+                key="Priority Proposal"
+            ).bool_value
+        except TargetExtra.DoesNotExist:
+            is_priority = False
+        proposal = PROPOSALS["priority"] if is_priority else PROPOSALS["low_priority"]
+
         # get window
         window, duration = self._build_window()
 
         # build payload
         payload = {
             "name": "%s #%d" % (target.name, transit.number),
-            "proposal": SETTINGS["proposal"],
+            "proposal": proposal,
             "ipp_value": self.cleaned_data["ipp_value"],
             "operator": "SINGLE",
             "observation_type": "NORMAL",
