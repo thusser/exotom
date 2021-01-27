@@ -161,7 +161,7 @@ class TestCommand(TestCase):
         IAGBaseForm.proposal_choices = MagicMock(
             return_value=[
                 ("exo", "Exoplanets (exo)"),
-                ("exo_filler", "Low priority exoplanet obervations"),
+                ("exofiller", "Low priority exoplanet obervations"),
             ]
         )
 
@@ -266,7 +266,7 @@ class TestCommand(TestCase):
             call(
                 {
                     "name": "HAT-P-36b #252",
-                    "proposal": "exo_filler",
+                    "proposal": "exofiller",
                     "ipp_value": 1.05,
                     "operator": "SINGLE",
                     "observation_type": "NORMAL",
@@ -316,7 +316,7 @@ class TestCommand(TestCase):
         IAGBaseForm.proposal_choices = MagicMock(
             return_value=[
                 ("exo", "Exoplanets (exo)"),
-                ("exo_filler", "Low priority exoplanet obervations"),
+                ("exofiller", "Low priority exoplanet obervations"),
             ]
         )
 
@@ -357,7 +357,7 @@ class TestCommand(TestCase):
             call(
                 {
                     "name": "HAT-P-36b #252",
-                    "proposal": "exo_filler",
+                    "proposal": "exofiller",
                     "ipp_value": 1.05,
                     "operator": "SINGLE",
                     "observation_type": "NORMAL",

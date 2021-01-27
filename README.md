@@ -76,7 +76,7 @@ SITES = {
     },
 }
 
-PROPOSALS = {'priority' : 'exo', 'low_priority': 'exo_filler'}
+PROPOSALS = {'priority' : 'exo', 'low_priority': 'exofiller'}
 ```
 
 ### make django migrations
