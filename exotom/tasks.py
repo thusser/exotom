@@ -1,6 +1,9 @@
 from tom_targets.models import Target
 
 from exotom.management.commands.submit_transit_observations import submit_all_transits
+from exotom.management.commands.submit_transit_contact_observations import (
+    submit_all_transit_contacts,
+)
 from exotom.transits import calculate_transits_during_next_n_days
 from exotom.celery import app
 
@@ -13,3 +16,6 @@ def update():
 
     # submit observable transits
     submit_all_transits()
+
+    # submit just ingres/egress
+    submit_all_transit_contacts()
