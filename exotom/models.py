@@ -41,16 +41,56 @@ class Transit(models.Model):
             ]
         )
 
+    def ingress_visible(self, facility):
+        return any(
+            [
+                td.ingress_visible
+                for td in self.transitobservationdetails_set.filter(facility=facility)
+            ]
+        )
+
+    def egress_visible(self, facility):
+        return any(
+            [
+                td.egress_visible
+                for td in self.transitobservationdetails_set.filter(facility=facility)
+            ]
+        )
+
     def visible_at_site(self, site):
         """Checks if transit is in the sky at the given site."""
         tds = self.transitobservationdetails_set.filter(site=site)
-        observable = any([td.visible for td in tds])
-        return observable
+        visible = any([td.visible for td in tds])
+        return visible
 
     def observable_at_site(self, site):
         """Checks if transit is in the sky at the given site and whether star is bright enough and transit deep enough."""
         tds = self.transitobservationdetails_set.filter(site=site)
         observable = any([td.observable for td in tds])
+        return observable
+
+    def ingress_visible_at_site(self, site):
+        """Checks if transit is in the sky at the given site."""
+        tds = self.transitobservationdetails_set.filter(site=site)
+        visible = any([td.ingress_visible for td in tds])
+        return visible
+
+    def ingress_observable_at_site(self, site):
+        """Checks if transit is in the sky at the given site and whether star is bright enough and transit deep enough."""
+        tds = self.transitobservationdetails_set.filter(site=site)
+        observable = any([td.ingress_observable for td in tds])
+        return observable
+
+    def egress_visible_at_site(self, site):
+        """Checks if transit is in the sky at the given site."""
+        tds = self.transitobservationdetails_set.filter(site=site)
+        visible = any([td.egress_visible for td in tds])
+        return visible
+
+    def egress_observable_at_site(self, site):
+        """Checks if transit is in the sky at the given site and whether star is bright enough and transit deep enough."""
+        tds = self.transitobservationdetails_set.filter(site=site)
+        observable = any([td.egress_observable for td in tds])
         return observable
 
     @property
@@ -91,6 +131,18 @@ class TransitObservationDetails(models.Model):
     visible = models.BooleanField("Whether transit is visible", null=True)
     observable = models.BooleanField(
         "Whether transit can be observed at this site", null=True
+    )
+
+    ingress_visible = models.BooleanField(
+        "Whether transit ingress is visible", null=True
+    )
+    ingress_observable = models.BooleanField(
+        "Whether transit ingress can be observed at this site", null=True
+    )
+
+    egress_visible = models.BooleanField("Whether transit egress is visible", null=True)
+    egress_observable = models.BooleanField(
+        "Whether transit egress can be observed at this site", null=True
     )
 
     class Meta:

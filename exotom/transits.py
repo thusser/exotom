@@ -114,7 +114,9 @@ def create_transit_details(transit: Transit, observer, coords, start, mid, end, 
     }
 
     # coords to altaz at mid-transit
-    alt_az = observer.altaz(mid, coords)
+    alt_az_start = observer.altaz(start, coords)
+    alt_az_mid = observer.altaz(mid, coords)
+    alt_az_end = observer.altaz(end, coords)
 
     # create new TransitSite and fill it
     details = TransitObservationDetails()
@@ -123,9 +125,15 @@ def create_transit_details(transit: Transit, observer, coords, start, mid, end, 
     details.target_alt_end = target["end"].alt.degree
     details.sun_alt_mid = sun["mid"].alt.degree
     details.moon_alt_mid = moon.alt.degree
-    details.moon_dist_mid = alt_az.separation(moon).degree
+    details.moon_dist_mid = alt_az_mid.separation(moon).degree
 
-    # decide, whether it's visible
+    moon_dist_start = alt_az_start.separation(moon).degree
+    moon_dist_end = alt_az_end.separation(moon).degree
+
+    transit_observation_constraints_at_site = SITES[site][
+        "transitObservationConstraints"
+    ]
+
     details.visible = (
         details.target_alt_start > 30
         and details.target_alt_mid > 30
@@ -135,13 +143,33 @@ def create_transit_details(transit: Transit, observer, coords, start, mid, end, 
         and sun["end"].alt.degree < -12
         and details.moon_dist_mid > 30
     )
-
-    transit_observation_constraints_at_site = SITES[site][
-        "transitObservationConstraints"
-    ]
-    # decide, whether it's observable
     details.observable = (
         details.visible
+        and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
+        and transit.depth
+        >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
+    )
+
+    # visibility/observability for ingress/egress of transit only
+    details.ingress_visible = (
+        details.target_alt_start > 30
+        and sun["start"].alt.degree < -12
+        and moon_dist_start > 30
+    )
+    details.ingress_observable = (
+        details.ingress_visible
+        and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
+        and transit.depth
+        >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
+    )
+
+    details.egress_visible = (
+        details.target_alt_end > 30
+        and sun["end"].alt.degree < -12
+        and moon_dist_end > 30
+    )
+    details.egress_observable = (
+        details.egress_visible
         and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
         and transit.depth
         >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
