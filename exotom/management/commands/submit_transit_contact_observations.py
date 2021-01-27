@@ -40,12 +40,12 @@ def submit_all_transit_contacts():
             instrument_details = instruments[instrument_type]
 
             for transit in transits_for_target:
-                submit_all_ingresses_egresses(
+                submit_ingresses_egresses_for_transit(
                     instrument_details, instrument_type, site_name, transit
                 )
 
 
-def submit_all_ingresses_egresses(
+def submit_ingresses_egresses_for_transit(
     instrument_details, instrument_type, site_name, transit
 ):
     if transit.ingress_observable_at_site(site=site_name):
@@ -104,4 +104,4 @@ def get_observation_data(
 
 
 def get_ipp_value(transit: Transit) -> float:
-    return 1.05
+    return 0.5

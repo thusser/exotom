@@ -17,7 +17,7 @@ class TestCommand(TestCase):
         IAGFacility.submit_observation = MagicMock()
         pass
 
-    def test_basic_observation_submission(self):
+    def test_basic_transit_contact_observation_submission(self):
 
         target1_dict = {
             "name": "HAT-P-36b",
@@ -48,7 +48,7 @@ class TestCommand(TestCase):
                     {
                         "name": "HAT-P-36b #252 INGRESS",
                         "proposal": "exo",
-                        "ipp_value": 1.05,
+                        "ipp_value": 0.5,
                         "operator": "SINGLE",
                         "observation_type": "NORMAL",
                         "requests": [
@@ -97,7 +97,7 @@ class TestCommand(TestCase):
                     {
                         "name": "HAT-P-36b #252 EGRESS",
                         "proposal": "exo",
-                        "ipp_value": 1.05,
+                        "ipp_value": 0.5,
                         "operator": "SINGLE",
                         "observation_type": "NORMAL",
                         "requests": [
