@@ -79,9 +79,13 @@ def get_observation_data(
         "instrument_type": instrument_type,
         "transit": transit.number,
         "target_id": transit.target_id,
-        "ipp_value": 1.05,
+        "ipp_value": get_ipp_value(transit),
         "exposure_time": exposure_time,
         "readout_mode": instrument_details["modes"]["readout"]["modes"][0]["code"],
         "filter": instrument_details["optical_elements"]["filters"][0]["code"],
     }
     return data
+
+
+def get_ipp_value(transit: Transit) -> float:
+    return 1.05
