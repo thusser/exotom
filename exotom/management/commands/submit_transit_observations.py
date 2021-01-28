@@ -23,7 +23,7 @@ class Command(BaseCommand):
 def submit_all_transits():
     now = Time.now()
 
-    targets = Target.objects.all()
+    targets = Target.objects.all().order_by("id")
 
     instruments = get_instruments()
 
