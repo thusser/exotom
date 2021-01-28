@@ -96,6 +96,7 @@ def get_observation_data(
         "contact": contact,
         "target_id": transit.target_id,
         "ipp_value": get_ipp_value(transit),
+        "max_airmass": 2.0,  # correspond to alt >= 30°
         "exposure_time": exposure_time,
         "readout_mode": instrument_details["modes"]["readout"]["modes"][0]["code"],
         "filter": instrument_details["optical_elements"]["filters"][0]["code"],

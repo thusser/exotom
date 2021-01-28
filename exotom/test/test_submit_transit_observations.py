@@ -89,7 +89,7 @@ class TestCommand(TestCase):
                                         ],
                                         "acquisition_config": {"mode": "ON"},
                                         "guiding_config": {"mode": "ON"},
-                                        "constraints": {"max_airmass": 1.5},
+                                        "constraints": {"max_airmass": 2.0},
                                     }
                                 ],
                                 "windows": [
@@ -141,7 +141,7 @@ class TestCommand(TestCase):
                                         ],
                                         "acquisition_config": {"mode": "ON"},
                                         "guiding_config": {"mode": "ON"},
-                                        "constraints": {"max_airmass": 1.5},
+                                        "constraints": {"max_airmass": 2.0},
                                     }
                                 ],
                                 "windows": [
@@ -296,7 +296,7 @@ class TestCommand(TestCase):
                                     ],
                                     "acquisition_config": {"mode": "ON"},
                                     "guiding_config": {"mode": "ON"},
-                                    "constraints": {"max_airmass": 1.5},
+                                    "constraints": {"max_airmass": 2.0},
                                 }
                             ],
                             "windows": [
@@ -387,7 +387,7 @@ class TestCommand(TestCase):
                                     ],
                                     "acquisition_config": {"mode": "ON"},
                                     "guiding_config": {"mode": "ON"},
-                                    "constraints": {"max_airmass": 1.5},
+                                    "constraints": {"max_airmass": 2.0},
                                 }
                             ],
                             "windows": [

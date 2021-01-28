@@ -110,7 +110,7 @@ class IAGTransitForm(IAGImagingObservationForm):
             "instrument_configs": self._build_instrument_config(),
             "acquisition_config": self._build_acquisition_config(),
             "guiding_config": self._build_guiding_config(),
-            "constraints": {"max_airmass": SETTINGS["max_airmass"]},
+            "constraints": {"max_airmass": self.cleaned_data["max_airmass"]},
         }
 
     def _build_window(self):
@@ -277,7 +277,7 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
             "instrument_configs": self._build_instrument_config(),
             "acquisition_config": self._build_acquisition_config(),
             "guiding_config": self._build_guiding_config(),
-            "constraints": {"max_airmass": SETTINGS["max_airmass"]},
+            "constraints": {"max_airmass": self.cleaned_data["max_airmass"]},
         }
 
     def _build_window(self):
