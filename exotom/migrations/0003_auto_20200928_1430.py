@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('exotom', '0002_transitdetails'),
+        ("exotom", "0002_transitdetails"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='transitdetails',
-            name='facility',
-            field=models.TextField(default='IAG50', verbose_name='Name of facility.'),
+            model_name="transitdetails",
+            name="facility",
+            field=models.TextField(default="IAG50", verbose_name="Name of facility."),
             preserve_default=False,
         ),
         migrations.AlterIndexTogether(
-            name='transitdetails',
-            index_together={('transit', 'facility', 'site')},
+            name="transitdetails",
+            index_together={("transit", "facility", "site")},
         ),
     ]

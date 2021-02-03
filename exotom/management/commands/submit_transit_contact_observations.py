@@ -3,7 +3,7 @@ import traceback
 from django.core.management.base import BaseCommand
 
 from exotom.settings import FACILITIES, SITES
-from exotom.ofi.iagtransit import IAGTransitForm
+from exotom.ofi.iagtransit import IAGTransitForm, IAGTransitSingleContactForm
 from tom_iag.iag import IAGFacility, get_instruments
 from exotom.models import Target, Transit
 
@@ -16,17 +16,11 @@ import pytz
 class Command(BaseCommand):
     help = "Submit all transits that can be observed in the following night to telescope scheduler."
 
-    def add_arguments(self, parser):
-        parser.add_argument("--only_n_transits", type=int, default=-1)
-
     def handle(self, *args, **options):
-        submit_only_n_transits = options["only_n_transits"]
-        submit_all_transits(submit_only_n_transits)
+        submit_all_transit_contacts()
 
 
-def submit_all_transits(submit_only_n_transits: int = -1):
-    submission_counter = 0
-
+def submit_all_transit_contacts():
     now = Time.now()
 
     targets = Target.objects.all().order_by("id")
@@ -46,41 +40,51 @@ def submit_all_transits(submit_only_n_transits: int = -1):
             instrument_details = instruments[instrument_type]
 
             for transit in transits_for_target:
-                if transit.observable_at_site(site=site_name):
-                    if submit_only_n_transits != -1:
-                        if submission_counter >= submit_only_n_transits:
-                            return
-                        submission_counter += 1
-
-                    try:
-                        submit_transit_to_instrument(
-                            transit, instrument_type, instrument_details
-                        )
-                    except Exception as e:
-                        print(
-                            f"Error when submitting transit observation to instrument"
-                        )
-                        print(traceback.format_exc())
+                submit_ingresses_egresses_for_transit(
+                    instrument_details, instrument_type, site_name, transit
+                )
 
 
-def submit_transit_to_instrument(
-    transit: Transit, instrument_type: str, instrument_details: dict
+def submit_ingresses_egresses_for_transit(
+    instrument_details, instrument_type, site_name, transit
+):
+    if transit.ingress_observable_at_site(site=site_name):
+        try:
+            submit_transit_single_contact_to_instrument(
+                transit, instrument_type, instrument_details, contact="ingress"
+            )
+        except Exception as e:
+            print(f"Error when submitting transit observation to instrument")
+            print(traceback.format_exc())
+
+    if transit.egress_observable_at_site(site=site_name):
+        try:
+            submit_transit_single_contact_to_instrument(
+                transit, instrument_type, instrument_details, contact="egress"
+            )
+        except Exception as e:
+            print(f"Error when submitting transit observation to instrument")
+            print(traceback.format_exc())
+
+
+def submit_transit_single_contact_to_instrument(
+    transit: Transit, instrument_type: str, instrument_details: dict, contact: str
 ):
     print(
-        f"Submitting transit {transit} with transit id {transit.id} and target id {transit.target_id}"
+        f"Submitting transit {contact.upper()} {transit} with transit id {transit.id} and target id {transit.target_id}"
     )
 
     observation_data = get_observation_data(
-        transit, instrument_type, instrument_details
+        transit, instrument_type, instrument_details, contact
     )
-    form = IAGTransitForm(initial=observation_data, data=observation_data)
+    form = IAGTransitSingleContactForm(initial=observation_data, data=observation_data)
     form.is_valid()
     facility = IAGFacility()
     facility.submit_observation(form.observation_payload())
 
 
 def get_observation_data(
-    transit: Transit, instrument_type: str, instrument_details: dict
+    transit: Transit, instrument_type: str, instrument_details: dict, contact: str
 ) -> dict:
     magnitude = transit.target.targetextra_set.get(key="Mag (TESS)").float_value
     exposure_time = calculate_exposure_time(magnitude)
@@ -89,6 +93,7 @@ def get_observation_data(
         "facility": "IAGTransit",
         "instrument_type": instrument_type,
         "transit": transit.number,
+        "contact": contact,
         "target_id": transit.target_id,
         "ipp_value": get_ipp_value(transit),
         "max_airmass": 2.0,  # correspond to alt >= 30°
@@ -100,4 +105,4 @@ def get_observation_data(
 
 
 def get_ipp_value(transit: Transit) -> float:
-    return 1.05
+    return 0.5

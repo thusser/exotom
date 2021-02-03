@@ -17,7 +17,11 @@ from django.urls import path, include
 from exotom.views import TransitsView, TransitObservationDetailView
 
 urlpatterns = [
-    path('', include('tom_common.urls')),
-    path('transits/', TransitsView.as_view(), name='transits'),
-    path('transits/<int:target>/<int:transit>/', TransitObservationDetailView.as_view(), name='transitobservationdetails'),
+    path("", include("tom_common.urls")),
+    path("transits/", TransitsView.as_view(), name="transits"),
+    path(
+        "transits/<int:target>/<int:transit>/",
+        TransitObservationDetailView.as_view(),
+        name="transitobservationdetails",
+    ),
 ]

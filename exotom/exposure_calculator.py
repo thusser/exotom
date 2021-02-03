@@ -2,7 +2,7 @@ import numpy as np
 
 
 def calculate_exposure_time(mag: float) -> float:
-    """ Calculates exposure time in seconds for star of given magnitude.
+    """Calculates exposure time in seconds for star of given magnitude.
     So far only for iag50cm @ 2x2 binning
     """
 

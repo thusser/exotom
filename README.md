@@ -3,7 +3,7 @@
 ## Project local dev setup
 Clone exotom repo
 ```
-git clone https://gitlab.gwdg.de/monet/exotom.git
+git clone https://github.com/thusser/exotom.git
 cd exotom
 ```
 
@@ -28,8 +28,8 @@ cd ..
 pip install -r requirements.txt
 ```
 
-### local settings
-For local development reate `local_settings.py` at top-level of project with following content (fill in your observation portal api key)
+### local_settings
+For local development create `local_settings.py` at top-level of project with following content (fill in your observation portal api key)
 ```
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -50,16 +50,33 @@ FACILITIES = {
         'instrument_type': '0M5 SBIG6303E',
         'proposal': 'exo',
     },
-    'IAGTransit': {
-        'instruments': {
-            'McDonald': '1M2 SBIG8300',
-            'Sutherland': '1M2 FLI230',
-            'Göttingen': '0M5 SBIG6303E'
+}
+
+SITES = {
+    'McDonald': {
+        'transitObservationConstraints': {
+            'maxMagnitude': 20,
+            'minTransitDepthInMmag': 1,
         },
-        'proposal': 'exo',
-        'max_airmass': 1.5
+        'instrument': '1M2 SBIG8300'
+    },
+    'Sutherland': {
+        'transitObservationConstraints': {
+            'maxMagnitude': 20,
+            'minTransitDepthInMmag': 1,
+        },
+        'instrument': '1M2 FLI230'
+    },
+    'Göttingen': {
+        'transitObservationConstraints': {
+            'maxMagnitude': 14,
+            'minTransitDepthInMmag': 1,
+        },
+        'instrument': '0M5 SBIG6303E'
     },
 }
+
+PROPOSALS = {'priority' : 'exo', 'low_priority': 'exofiller'}
 ```
 
 ### make django migrations
@@ -73,7 +90,14 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### run dev server
+### Run dev server
 ```
 python manage.py runserver
+```
+
+## Git hooks
+
+Install pre-commit hook through python package pre-commit
+```
+pre-commit install
 ```

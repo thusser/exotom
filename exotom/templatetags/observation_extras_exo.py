@@ -7,7 +7,7 @@ from exotom.models import Transit
 register = template.Library()
 
 
-@register.inclusion_tag('tom_iag/partials/target_transits.html')
+@register.inclusion_tag("tom_iag/partials/target_transits.html")
 def transits(target):
     """
     Collect the transits for a given target and pass them to the transits.html partial template.
@@ -20,20 +20,27 @@ def transits(target):
     # get future transits
     prediction = Transit.objects.filter(target=target, end__gt=now.isot)
 
-    return {'target': target, 'prediction': prediction}
+    return {"target": target, "prediction": prediction}
 
 
-@register.inclusion_tag('tom_iag/partials/transit_observing_buttons.html')
+@register.inclusion_tag("tom_iag/partials/transit_observing_buttons.html")
 def transit_observing_buttons(transit):
     """
     Displays the observation buttons for transits.
     """
 
     # abbrevations
-    abbr = {'McDonald': 'N', 'Sutherland': 'S', 'Göttingen': 'G'}
+    abbr = {"McDonald": "N", "Sutherland": "S", "Göttingen": "G"}
 
     # get list with sites
-    sites = [(f[1], SETTINGS['instruments'][f[1]], abbr[f[1]]) for f in transit.facilities]
+    sites = [
+        (f[1], SETTINGS["instruments"][f[1]], abbr[f[1]]) for f in transit.facilities
+    ]
 
     # return it
-    return {'target': transit.target, 'facility': 'IAGTransit', 'transit': transit, 'sites': sites}
+    return {
+        "target": transit.target,
+        "facility": "IAGTransit",
+        "transit": transit,
+        "sites": sites,
+    }
