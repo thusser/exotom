@@ -2,6 +2,9 @@ import logging
 from django.db import models
 from tom_targets.models import Target
 
+from datetime import timedelta
+
+
 log = logging.getLogger(__name__)
 
 
@@ -15,11 +18,35 @@ class Transit(models.Model):
     mid = models.DateTimeField("Time of mid-transit")
     end = models.DateTimeField("Time the transit ends")
 
-    def uncertainty(self):
+    def uncertainty_in_days(self):
         return (
-            self.target.extra_fields["Epoch (BJD) err"]
-            + self.number * self.target.extra_fields["Period (days) err"]
-        ) * 1440
+            (self.target.extra_fields["Epoch (BJD) err"]) ** 2
+            + (self.number * self.target.extra_fields["Period (days) err"]) ** 2
+        ) ** 0.5
+
+    def start_earliest(self):
+        err = timedelta(days=self.uncertainty_in_days())
+        return self.start - err
+
+    def start_latest(self):
+        err = timedelta(days=self.uncertainty_in_days())
+        return self.start + err
+
+    def mid_earliest(self):
+        err = timedelta(days=self.uncertainty_in_days())
+        return self.mid - err
+
+    def mid_latest(self):
+        err = timedelta(days=self.uncertainty_in_days())
+        return self.mid + err
+
+    def end_earliest(self):
+        err = timedelta(days=self.uncertainty_in_days())
+        return self.end - err
+
+    def end_latest(self):
+        err = timedelta(days=self.uncertainty_in_days())
+        return self.end + err
 
     @property
     def facilities(self):

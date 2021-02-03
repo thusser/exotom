@@ -35,27 +35,27 @@ class TransitObservationDetailView(TemplateView):
             target_id=kwargs["target"], number=kwargs["transit"]
         )
         target = transit.target
-
-        # error
-        T0_err = target.extra_fields["Epoch (BJD) err"]
-        p_err = target.extra_fields["Period (days) err"]
-        err = T0_err + transit.number * p_err
+        uncertainty_in_mins = transit.uncertainty_in_days() * 1440
 
         # calculate times
         times = {
             "start": {
-                "earliest": transit.start - timedelta(days=err),
-                "latest": transit.start + timedelta(days=err),
+                "earliest": transit.start_earliest(),
+                "latest": transit.start_latest(),
             },
             "mid": {
-                "earliest": transit.mid - timedelta(days=err),
-                "latest": transit.mid + timedelta(days=err),
+                "earliest": transit.mid_earliest(),
+                "latest": transit.mid_latest(),
             },
             "end": {
-                "earliest": transit.end - timedelta(days=err),
-                "latest": transit.end + timedelta(days=err),
+                "earliest": transit.end_earliest(),
+                "latest": transit.end_latest(),
             },
         }
 
         # sort and return
-        return {"transit": transit, "times": times, "uncertainty": err * 1440}
+        return {
+            "transit": transit,
+            "times": times,
+            "uncertainty_in_mins": uncertainty_in_mins,
+        }

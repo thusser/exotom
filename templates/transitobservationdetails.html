@@ -21,12 +21,12 @@
     </p>
     <p>
         <strong>Depth: </strong>
-        {{ transit.target|target_extra_field:"Depth (mmag)"|floatformat:2 }} &pm;
-        {{ transit.target|target_extra_field:"Depth (mmag) err"|floatformat:2 }} mmag
+        {{ transit.target|target_extra_field:"Depth (mmag)"|floatformat:4 }} &pm;
+        {{ transit.target|target_extra_field:"Depth (mmag) err"|floatformat:4 }} mmag
     </p>
 
     <h3>Times</h3>
-    <p><strong>Prediction error for this transit:</strong> {{ uncertainty|floatformat:2 }} mins</p>
+    <p><strong>Prediction error for this transit:</strong> {{ uncertainty_in_mins|floatformat:2 }} mins</p>
     <table class="table table-borderless table-hover center">
         <tr>
             <th>&nbsp;</th>
@@ -43,15 +43,15 @@
         </tr>
         <tr>
             <th>Predicted</th>
-            <td><strong>{{ transit.start|date:"H:i:s" }}</strong></td>
-            <td><strong>{{ transit.mid|date:"M d, H:i:s" }}</strong></td>
-            <td><strong>{{ transit.end|date:"H:i:s" }}</strong></td>
+            <td style="padding-left:1.6em"> <strong>{{ transit.start|date:"H:i:s" }}</strong></td>
+            <td style="padding-left:1.6em"><strong>{{ transit.mid|date:"M d, H:i:s" }}</strong></td>
+            <td style="padding-left:1.6em"><strong>{{ transit.end|date:"H:i:s" }}</strong></td>
         </tr>
         <tr>
             <th>Latest</th>
-            <td>{{ times.start.latest|date:"H:i:s" }}</td>
-            <td>{{ times.mid.latest|date:"M d, H:i:s" }}</td>
-            <td>{{ times.end.latest|date:"H:i:s" }}</td>
+            <td style="padding-left:3em">{{ times.start.latest|date:"H:i:s" }}</td>
+            <td style="padding-left:3em">{{ times.mid.latest|date:"M d, H:i:s" }}</td>
+            <td style="padding-left:3em">{{ times.end.latest|date:"H:i:s" }}</td>
         </tr>
         </tbody>
     </table>
