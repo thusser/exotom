@@ -121,8 +121,8 @@ class IAGTransitForm(IAGImagingObservationForm):
         )
 
         # calculate start, end and duration
-        start = Time(transit.start) - 25 * u.min
-        end = Time(transit.end) + 25 * u.min
+        start = Time(transit.start_earliest()) - 15 * u.min
+        end = Time(transit.end_latest()) + 15 * u.min
         duration = end - start
 
         # return it
@@ -290,12 +290,12 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
 
         # calculate start, end and duration
         if contact == "ingress":
-            start = Time(transit.start) - 20 * u.min
-            end = Time(transit.start) + 20 * u.min
+            start = Time(transit.start_earliest()) - 15 * u.min
+            end = Time(transit.start_latest()) + 15 * u.min
             duration = end - start
         elif contact == "egress":
-            start = Time(transit.end) - 20 * u.min
-            end = Time(transit.end) + 20 * u.min
+            start = Time(transit.end_earliest()) - 15 * u.min
+            end = Time(transit.end_latest()) + 15 * u.min
             duration = end - start
 
         # return it

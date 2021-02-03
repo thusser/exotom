@@ -7,7 +7,7 @@ from exotom.models import Target, Transit, TransitObservationDetails
 from astropy.time import Time
 import datetime, pytz
 
-from exotom.management.commands.submit_transit_observations import Command
+from exotom.management.commands.submit_transit_observations import submit_all_transits
 from exotom.ofi.iagtransit import IAGTransitForm
 from exotom.settings import PROPOSALS
 
@@ -66,7 +66,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10311.182400000016,
+                                        "repeat_duration": 10026.676212000013,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -94,8 +94,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T09:43:03.998",
-                                        "end": "2021-01-19T12:46:55.180",
+                                        "start": "2021-01-19T09:45:26.251",
+                                        "end": "2021-01-19T12:44:32.927",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -118,7 +118,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10311.182399999996,
+                                        "repeat_duration": 10037.550436,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -146,8 +146,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-23T09:17:13.636",
-                                        "end": "2021-01-23T12:21:04.819",
+                                        "start": "2021-01-23T09:19:30.452",
+                                        "end": "2021-01-23T12:18:48.003",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -165,14 +165,12 @@ class TestCommand(TestCase):
             ]
         )
 
-        cmd = Command()
-
         for test_now, expected_call_args_list in zip(
             test_nows, expected_call_args_lists
         ):
             IAGFacility.submit_observation.reset_mock()
             Time.now = MagicMock(return_value=test_now)
-            cmd.handle()
+            submit_all_transits()
             with self.subTest():
                 self.assertEqual(
                     IAGFacility.submit_observation.call_args_list,
@@ -212,8 +210,6 @@ class TestCommand(TestCase):
         magnitude_depth_pairs = [(mag, dep) for mag in magnitudes for dep in depths]
         expected_call_numbers = [0, 1, 1, 0, 1, 1, 0, 0, 0]
 
-        cmd = Command()
-
         for (mag, depth), expected_call_number in zip(
             magnitude_depth_pairs, expected_call_numbers
         ):
@@ -226,7 +222,7 @@ class TestCommand(TestCase):
             target1 = Target(**target1_dict)
             target1.save(extras=target1_extra_fields)
 
-            cmd.handle()
+            submit_all_transits()
             with self.subTest():
                 number_of_calls = len(IAGFacility.submit_observation.call_args_list)
                 self.assertEqual(
@@ -275,7 +271,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10311.182400000016,
+                                    "repeat_duration": 10026.676212000013,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -301,8 +297,8 @@ class TestCommand(TestCase):
                             ],
                             "windows": [
                                 {
-                                    "start": "2021-01-19T09:43:03.998",
-                                    "end": "2021-01-19T12:46:55.180",
+                                    "start": "2021-01-19T09:45:26.251",
+                                    "end": "2021-01-19T12:44:32.927",
                                 }
                             ],
                             "location": {"telescope_class": "1m2"},
@@ -320,8 +316,7 @@ class TestCommand(TestCase):
             ]
         )
 
-        cmd = Command()
-        cmd.handle()
+        submit_all_transits()
 
         call_arg_list = IAGFacility.submit_observation.call_args_list
         self.assertEqual(call_arg_list, expected_call_args_list)
@@ -366,7 +361,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10311.182400000016,
+                                    "repeat_duration": 10026.676212000013,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -392,8 +387,8 @@ class TestCommand(TestCase):
                             ],
                             "windows": [
                                 {
-                                    "start": "2021-01-19T09:43:03.998",
-                                    "end": "2021-01-19T12:46:55.180",
+                                    "start": "2021-01-19T09:45:26.251",
+                                    "end": "2021-01-19T12:44:32.927",
                                 }
                             ],
                             "location": {"telescope_class": "1m2"},
@@ -403,8 +398,7 @@ class TestCommand(TestCase):
             )
         ]
 
-        cmd = Command()
-        cmd.handle()
+        submit_all_transits()
 
         call_arg_list = IAGFacility.submit_observation.call_args_list
         self.assertEqual(call_arg_list, expected_call_args_list)

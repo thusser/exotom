@@ -56,7 +56,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 1679.9999999999916,
+                                        "repeat_duration": 1995.4938119999974,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -84,8 +84,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T09:48:03.998",
-                                        "end": "2021-01-19T10:28:03.998",
+                                        "start": "2021-01-19T09:45:26.251",
+                                        "end": "2021-01-19T10:30:41.745",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -105,7 +105,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 1679.9999999999916,
+                                        "repeat_duration": 1995.4938120000022,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -133,8 +133,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T12:01:55.180",
-                                        "end": "2021-01-19T12:41:55.180",
+                                        "start": "2021-01-19T11:59:17.433",
+                                        "end": "2021-01-19T12:44:32.927",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -165,6 +165,6 @@ class TestCommand(TestCase):
                 self.assertEqual(
                     call_arg_list,
                     expected_call_args_list,
-                    f"IAGFacility.submit_observation not called with expected args."
-                    f" Called with {call_arg_list} instead of expected {expected_call_args_list}.",
+                    f"IAGFacility.submit_observation not called with expected args.\n"
+                    f" Called with {call_arg_list}\n instead of expected\n {expected_call_args_list}.",
                 )

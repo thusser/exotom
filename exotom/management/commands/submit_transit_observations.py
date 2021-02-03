@@ -16,11 +16,17 @@ import pytz
 class Command(BaseCommand):
     help = "Submit all transits that can be observed in the following night to telescope scheduler."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--only_n_transits", type=int, default=-1)
+
     def handle(self, *args, **options):
-        submit_all_transits()
+        submit_only_n_transits = options["only_n_transits"]
+        submit_all_transits(submit_only_n_transits)
 
 
-def submit_all_transits():
+def submit_all_transits(submit_only_n_transits: int = -1):
+    submission_counter = 0
+
     now = Time.now()
 
     targets = Target.objects.all().order_by("id")
@@ -41,6 +47,11 @@ def submit_all_transits():
 
             for transit in transits_for_target:
                 if transit.observable_at_site(site=site_name):
+                    if submit_only_n_transits != -1:
+                        if submission_counter >= submit_only_n_transits:
+                            return
+                        submission_counter += 1
+
                     try:
                         submit_transit_to_instrument(
                             transit, instrument_type, instrument_details
