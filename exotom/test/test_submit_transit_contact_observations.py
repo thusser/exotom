@@ -56,7 +56,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 1995.4938119999974,
+                                        "repeat_duration": 1995.493812000007,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -84,8 +84,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T09:45:26.251",
-                                        "end": "2021-01-19T10:30:41.745",
+                                        "start": "2021-01-19T09:41:14.584",
+                                        "end": "2021-01-19T10:26:30.078",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -133,8 +133,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T11:59:17.433",
-                                        "end": "2021-01-19T12:44:32.927",
+                                        "start": "2021-01-19T11:55:05.766",
+                                        "end": "2021-01-19T12:40:21.260",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
