@@ -1,6 +1,6 @@
 import pytz
 from astroplan import EclipsingSystem, Observer
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, EarthLocation
 from astropy.time import Time, TimeDelta
 import astropy.units as u
 import numpy as np
@@ -42,24 +42,39 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
     }
 
     # get coordinates
-    coords = SkyCoord(target.ra * u.deg, target.dec * u.deg)
+    target_coords = SkyCoord(target.ra * u.deg, target.dec * u.deg)
 
     # parse epoch
-    epoch = Time(target.extra_fields["Epoch (BJD)"], format="jd", scale="tdb")
+    # transit barycentric correction only wrt to earth center, not specific observatory location
+    earth_center = EarthLocation.from_geocentric(0, 0, 0, unit=u.m)
+    epoch_barycenter = Time(
+        target.extra_fields["Epoch (BJD)"],
+        format="jd",
+        scale="tdb",
+        location=earth_center,
+    )
     period = target.extra_fields["Period (days)"] * u.day
     duration = target.extra_fields["Duration (hours)"] * u.hour
 
     # create system
     system = EclipsingSystem(
-        primary_eclipse_time=epoch.utc, orbital_period=period, duration=duration
+        primary_eclipse_time=epoch_barycenter, orbital_period=period, duration=duration
     )
 
-    # find eclipses within next 10 days
+    # find eclipses within next n days
     obstime = now
     while True:
         # find next eclipse
-        eclipse = system.next_primary_eclipse_time(obstime)[0]
-        number = int(np.round((eclipse.jd - epoch.jd) / period.value))
+        eclipse_barycenter = system.next_primary_eclipse_time(obstime)[0]
+        transit_number = int(
+            np.round((eclipse_barycenter.jd - epoch_barycenter.jd) / period.value)
+        )
+
+        # apply barycentric correction
+        ltt = eclipse_barycenter.light_travel_time(
+            target_coords, kind="barycentric", location=earth_center
+        )
+        eclipse = eclipse_barycenter - ltt
 
         # too far?
         if eclipse > now + TimeDelta(n_days * u.day):
@@ -74,7 +89,7 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
             # create transit
             transit = Transit()
             transit.target = target
-            transit.number = number
+            transit.number = transit_number
             transit.start = start.datetime.astimezone(pytz.utc)
             transit.mid = eclipse.datetime.astimezone(pytz.utc)
             transit.end = end.datetime.astimezone(pytz.utc)
@@ -84,7 +99,7 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
             for site, observer in observers.items():
                 # create transit details
                 details = create_transit_details(
-                    transit, observer, coords, start, eclipse, end, site
+                    transit, observer, target_coords, start, eclipse, end, site
                 )
 
                 # save

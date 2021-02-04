@@ -45,46 +45,46 @@ class Test(TestCase):
         expected_transits = [
             {
                 "start": datetime.datetime(
-                    2021, 1, 19, 10, 8, 3, 997995, tzinfo=pytz.utc
+                    2021, 1, 19, 10, 3, 52, 330745, tzinfo=pytz.utc
                 ),
                 "mid": datetime.datetime(
-                    2021, 1, 19, 11, 14, 59, 589195, tzinfo=pytz.utc
+                    2021, 1, 19, 11, 10, 47, 921945, tzinfo=pytz.utc
                 ),
                 "end": datetime.datetime(
-                    2021, 1, 19, 12, 21, 55, 180395, tzinfo=pytz.utc
+                    2021, 1, 19, 12, 17, 43, 513145, tzinfo=pytz.utc
                 ),
             },
             {
                 "start": datetime.datetime(
-                    2021, 1, 20, 17, 59, 27, 210795, tzinfo=pytz.utc
+                    2021, 1, 20, 17, 55, 9, 571977, tzinfo=pytz.utc
                 ),
                 "mid": datetime.datetime(
-                    2021, 1, 20, 19, 6, 22, 801995, tzinfo=pytz.utc
+                    2021, 1, 20, 19, 2, 5, 163177, tzinfo=pytz.utc
                 ),
                 "end": datetime.datetime(
-                    2021, 1, 20, 20, 13, 18, 393195, tzinfo=pytz.utc
+                    2021, 1, 20, 20, 9, 0, 754377, tzinfo=pytz.utc
                 ),
             },
             {
                 "start": datetime.datetime(
-                    2021, 1, 22, 1, 50, 50, 423595, tzinfo=pytz.utc
+                    2021, 1, 22, 1, 46, 26, 953285, tzinfo=pytz.utc
                 ),
                 "mid": datetime.datetime(
-                    2021, 1, 22, 2, 57, 46, 14795, tzinfo=pytz.utc
+                    2021, 1, 22, 2, 53, 22, 544485, tzinfo=pytz.utc
                 ),
                 "end": datetime.datetime(
-                    2021, 1, 22, 4, 4, 41, 605995, tzinfo=pytz.utc
+                    2021, 1, 22, 4, 0, 18, 135685, tzinfo=pytz.utc
                 ),
             },
             {
                 "start": datetime.datetime(
-                    2021, 1, 23, 9, 42, 13, 636395, tzinfo=pytz.utc
+                    2021, 1, 23, 9, 37, 44, 477587, tzinfo=pytz.utc
                 ),
                 "mid": datetime.datetime(
-                    2021, 1, 23, 10, 49, 9, 227595, tzinfo=pytz.utc
+                    2021, 1, 23, 10, 44, 40, 68787, tzinfo=pytz.utc
                 ),
                 "end": datetime.datetime(
-                    2021, 1, 23, 11, 56, 4, 818795, tzinfo=pytz.utc
+                    2021, 1, 23, 11, 51, 35, 659987, tzinfo=pytz.utc
                 ),
             },
         ]
@@ -123,9 +123,14 @@ class Test(TestCase):
         )
 
         for transit, exp_transit in zip(transits_after, expected_transits):
+            # print(repr(transit.start))
+            # print(repr(transit.mid))
+            # print(repr(transit.end))
             with self.subTest():
                 self.assertEqual(transit.start, exp_transit["start"])
+            with self.subTest():
                 self.assertEqual(transit.mid, exp_transit["mid"])
+            with self.subTest():
                 self.assertEqual(transit.end, exp_transit["end"])
 
         transit_observation_details = TransitObservationDetails.objects.all()
