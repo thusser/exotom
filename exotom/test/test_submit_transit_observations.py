@@ -1,20 +1,19 @@
 from django.test import TestCase
 from unittest.mock import MagicMock, call
 from tom_iag.iag import IAGFacility, IAGBaseForm
+from tom_observations.models import ObservationRecord
 
-from exotom.models import Target, Transit, TransitObservationDetails
+from exotom.models import Target
 
 from astropy.time import Time
-import datetime, pytz
 
 from exotom.management.commands.submit_transit_observations import submit_all_transits
-from exotom.ofi.iagtransit import IAGTransitForm
 from exotom.settings import PROPOSALS
 
 
 class TestCommand(TestCase):
     def setUp(self) -> None:
-        IAGFacility.submit_observation = MagicMock()
+        IAGFacility.submit_observation = MagicMock(return_value=[1212])
 
         # mock this methods since they make api calls to observation portal
         IAGBaseForm.proposal_choices = MagicMock(
@@ -169,6 +168,8 @@ class TestCommand(TestCase):
             test_nows, expected_call_args_lists
         ):
             IAGFacility.submit_observation.reset_mock()
+            ObservationRecord.objects.all().delete()
+
             Time.now = MagicMock(return_value=test_now)
             submit_all_transits()
             with self.subTest():
@@ -179,9 +180,21 @@ class TestCommand(TestCase):
                     f" Called with \n{IAGFacility.submit_observation.call_args_list}\n instead of expected\n {expected_call_args_list}.",
                 )
 
+                n_expected_obs_records = 1 if expected_call_args_list != [] else 0
+                obs_records = ObservationRecord.objects.all()
+                self.assertEqual(
+                    len(obs_records),
+                    n_expected_obs_records,
+                    f"obs_records does not have length {n_expected_obs_records} (obs_records = {obs_records}).",
+                )
+
+                if n_expected_obs_records != 0:
+                    obs_record = ObservationRecord.objects.all()[0]
+                    self.assertEqual(obs_record.target, self.target1)
+
     def test_magnitude_and_transit_depth_check(self):
         # tests transit.observable check for mcdonald transit
-        IAGFacility.submit_observation = MagicMock()
+        IAGFacility.submit_observation = MagicMock(return_value=[1212])
 
         test_now = Time("2021-01-18T12:00:00")
         Time.now = MagicMock(return_value=test_now)
@@ -215,6 +228,7 @@ class TestCommand(TestCase):
         ):
             IAGFacility.submit_observation.reset_mock()
             Target.objects.all().delete()
+            ObservationRecord.objects.all().delete()
 
             target1_dict["name"] = f"test_mag_{mag}_depth_{depth}_target"
             target1_extra_fields["Mag (TESS)"] = mag
@@ -231,7 +245,18 @@ class TestCommand(TestCase):
                     f"Call number {number_of_calls} is not equal to expected {expected_call_number}",
                 )
 
-    def test_low_priority_proposal_with_empty_proposa_extra_filled(self):
+                obs_records = ObservationRecord.objects.all()
+                self.assertEqual(
+                    len(obs_records),
+                    expected_call_number,
+                    f"obs_records does not have length {expected_call_number} (obs_records = {obs_records}).",
+                )
+
+                if expected_call_number != 0:
+                    obs_record = ObservationRecord.objects.all()[0]
+                    self.assertEqual(obs_record.target, target1)
+
+    def test_low_priority_proposal_with_empty_proposal_extra_filled(self):
         Target.objects.all().delete()
 
         target1_dict = {
@@ -321,7 +346,7 @@ class TestCommand(TestCase):
         call_arg_list = IAGFacility.submit_observation.call_args_list
         self.assertEqual(call_arg_list, expected_call_args_list)
 
-    def test_low_priority_proposal_with_false_proposa_extra_filled(self):
+    def test_low_priority_proposal_with_false_proposal_extra_filled(self):
         Target.objects.all().delete()
 
         target1_dict = {
