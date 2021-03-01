@@ -1,7 +1,7 @@
 import traceback
 
 from django.core.management.base import BaseCommand
-
+from tom_observations.models import ObservationRecord
 from exotom.settings import FACILITIES, SITES
 from exotom.ofi.iagtransit import IAGTransitForm
 from tom_iag.iag import IAGFacility, get_instruments
@@ -76,7 +76,16 @@ def submit_transit_to_instrument(
     form = IAGTransitForm(initial=observation_data, data=observation_data)
     form.is_valid()
     facility = IAGFacility()
-    facility.submit_observation(form.observation_payload())
+    observation_ids = facility.submit_observation(form.observation_payload())
+
+    # create observation record
+    for observation_id in observation_ids:
+        record = ObservationRecord.objects.create(
+            target=transit.target,
+            facility="IAGTransit",
+            parameters=form.serialize_parameters(),
+            observation_id=observation_id,
+        )
 
 
 def get_observation_data(
