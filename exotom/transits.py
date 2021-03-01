@@ -106,7 +106,7 @@ def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
                 details.save()
 
         # next one
-        obstime = eclipse + TimeDelta(5 * u.minute)
+        obstime = eclipse + TimeDelta(30 * u.minute)
 
 
 def create_transit_details(transit: Transit, observer, coords, start, mid, end, site):
