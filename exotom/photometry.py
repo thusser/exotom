@@ -127,6 +127,7 @@ class LightCurveExtractor:
         ref_catalog: pd.DataFrame = copy.deepcopy(catalog)
 
         ref_catalog = ref_catalog[ref_catalog["fwhm"] > 2.5]
+        ref_catalog = ref_catalog[ref_catalog["ellipticity"] < 0.4]
         # ref_catalog = ref_catalog[ref_catalog["flux"] > 8e2]
         # # ref_catalog = ref_catalog[ref_catalog['peak'] > 5e2]
         ref_catalog = ref_catalog[ref_catalog["peak"] < 5e4]
@@ -189,7 +190,8 @@ class LightCurveExtractor:
                 filtered_ref_catalog.append(
                     ref_catalog[ref_catalog.id == self.target_id]
                 )
-        return filtered_ref_catalog
+            return filtered_ref_catalog
+        return ref_catalog
 
     def enforce_each_ref_source_exactly_once_per_image_and_valid_flux(
         self, image_catalogs: [pd.DataFrame], ref_catalog, flux_column_name

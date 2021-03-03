@@ -210,6 +210,7 @@ FACILITIES = {
 DATA_PRODUCT_TYPES = {
     "photometry": ("photometry", "Photometry"),
     "fits_file": ("fits_file", "FITS File"),
+    "photometry_catalog": ("photometry_catalog", "Photometry Catalog CSV"),
     "spectroscopy": ("spectroscopy", "Spectroscopy"),
     "image_file": ("image_file", "Image File"),
 }
