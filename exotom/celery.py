@@ -19,6 +19,10 @@ app.conf.beat_schedule = {
     },
     "update_observation_status": {
         "task": "exotom.tasks.update_observation_status",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "process_new_observations": {
+        "task": "exotom.tasks.process_new_observations",
         "schedule": crontab(hour=13, minute=0),
     },
 }

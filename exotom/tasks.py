@@ -38,7 +38,9 @@ def update_observation_status():
 
 
 @app.task
-def process_new_reduced_dataproducts():
+def process_new_observations():
+    update_observation_status()
+
     for observation_record in ObservationRecord.objects.all():
         try:
             attempt_analyse_transit_observation(observation_record)
