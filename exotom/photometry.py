@@ -30,11 +30,14 @@ class LightCurveExtractor:
         self.target_id: Union[int, None] = None
         self.matched_image_catalogs_with_target: Union[list, None] = None
 
-    def get_best_relative_light_curve(
+    def get_best_relative_light_curve_dataframe(
         self,
         flux_column_name: str = "flux",
         use_only_n_brightest_ref_sources: int = None,
     ):
+        """Return a dataframe with one column for each comparison star flux over time
+        and a column for target and relative target flux."""
+
         (
             target_light_curve,
             cmp_light_curves,
@@ -42,12 +45,15 @@ class LightCurveExtractor:
             flux_column_name=flux_column_name,
             use_only_n_brightest_ref_sources=use_only_n_brightest_ref_sources,
         )
+
         cmp_light_curves = self.filter_noisy_light_curves(cmp_light_curves)
-        target_relative_light_curve = target_light_curve / cmp_light_curves.sum(
+        light_curve_df = cmp_light_curves
+        light_curve_df["target"] = target_light_curve
+        light_curve_df["target_rel"] = target_light_curve / light_curve_df.sum(
             axis="columns"
         )
 
-        return target_relative_light_curve, cmp_light_curves
+        return light_curve_df
 
     def get_target_and_ref_stars_light_curves(
         self,
@@ -92,7 +98,7 @@ class LightCurveExtractor:
             return
 
         ref_catalog, ref_catalog_coords = self.get_ref_catalog_from_catalog(
-            self.full_image_catalogs[100]
+            self.full_image_catalogs[0]
         )
         self.target_id = self.find_target_id(ref_catalog_coords)
         print(f"Starting with {len(ref_catalog)} reference sources.")
@@ -203,7 +209,10 @@ class LightCurveExtractor:
         ids = ref_catalog.id
         source_flux_values = pd.DataFrame(index=times, columns=ids)
 
-        for catalog in image_catalogs:
+        for i_cat, catalog in enumerate(image_catalogs):
+            if i_cat % 100 == 0:
+                print("Checking frame %d/%d ..." % (i_cat, len(image_catalogs) - 1))
+
             time = catalog.iloc[0].time
             for id in ids:
                 try:
@@ -222,7 +231,7 @@ class LightCurveExtractor:
         ].index
 
         print(
-            f"Removing these ref_sources b/c they are not exactly once in each image or have {flux_column_name} value nan: {remove_ref_sources_ids}"
+            f"Removing these ref_sources b/c they are not exactly once in each image or have '{flux_column_name}' value nan: {remove_ref_sources_ids}"
         )
         for remove_sources_id in remove_ref_sources_ids:
             ref_catalog.drop(labels=remove_sources_id, axis="index", inplace=True)
