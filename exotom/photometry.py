@@ -14,46 +14,144 @@ from scipy.optimize import curve_fit
 MAX_SEPARATION_TO_CATALOG_IN_DEG = 5 / 3600
 
 
-class LightCurveExtractor:
+class TransitLightCurveExtractor:
     def __init__(
         self,
         image_catalogs: [],
         target_coord: SkyCoord,
         one_image_for_plot: np.ndarray = None,
+        max_allowed_pixel_value: float = 5e4,
+        max_allowed_source_ellipticity: float = 0.4,
+        min_allowed_source_fwhm: float = 2.5,
+    ):
+
+        self.target_coord = target_coord
+        self.lce = LightCurvesExtractor(
+            image_catalogs,
+            target_coord,
+            one_image_for_plot,
+            max_allowed_pixel_value,
+            max_allowed_source_ellipticity,
+            min_allowed_source_fwhm,
+        )
+        self.light_curves_df: Union[pd.DataFrame, None] = None
+        # self.filtered_light_curves_with_target_rel_light_curve_df: Union[pd.DataFrame, None] = None
+
+    def get_all_light_curves_dataframe(
+        self,
+        flux_column_name: str = "flux",
+        use_only_n_brightest_ref_sources: int = None,
+        force_recalculate: bool = False,
+    ):
+        if not self.light_curves_df or force_recalculate:
+            self.light_curves_df = self.lce.get_target_and_ref_stars_light_curves_df(
+                flux_column_name, use_only_n_brightest_ref_sources
+            )
+        return self.light_curves_df
+
+    def get_best_relative_transit_light_curve_dataframe(self) -> pd.DataFrame:
+        """Filter out ref stars that are noisy from light_curves_df.
+        :returns pd.DataFrame that contains the lightcurves of good reference stars and target
+        and relative light curve of target
+        """
+        light_curves_df = self.get_all_light_curves_dataframe()
+
+        filtered_light_curves = self.filter_noisy_light_curves(light_curves_df)
+
+        filtered_light_curves_with_target_rel_light_curve_df = filtered_light_curves
+        filtered_light_curves_with_target_rel_light_curve_df[
+            "target_rel"
+        ] = filtered_light_curves["target"] / filtered_light_curves[
+            filter(lambda col: col != "target", filtered_light_curves.columns)
+        ].sum(
+            axis="columns"
+        )
+
+        print(
+            f"Columns of final best relative transit light curve dataframe: "
+            f"{list(filtered_light_curves_with_target_rel_light_curve_df.columns)}"
+        )
+        return filtered_light_curves_with_target_rel_light_curve_df
+
+    def filter_noisy_light_curves(
+        self, light_curves_df, max_detrended_normed_std: float = 0.01
+    ):
+        """Filters out light curves of ref sources that are noisy. For that it detrends the normed light curves
+        with a linear function of the airmass. Ref sources with detrended normed light curves with standard
+        deviation > max_detrended_normed_std are removed.
+
+        :param cmp_light_curves:
+        :param max_detrended_normed_std:
+        :return: filtered light curves
+        """
+        times = Time(light_curves_df.index, format="jd")
+        times, airmass = self.get_airmass(times)
+        airmass_func = interpolate.interp1d(times, airmass, kind="linear")
+
+        remove_columns = []
+        ref_star_columns = [
+            col for col in light_curves_df.columns if col not in ["target"]
+        ]
+        for col in ref_star_columns:
+            cmp_lc = light_curves_df[col]
+            cmp_lc_normed = cmp_lc / cmp_lc.mean()
+            # print(cmp_lc.mean(), cmp_lc, cmp_lc_normed, )
+            def fit_func(time, m, b):
+                return m * airmass_func(time) + b
+
+            popt, pcov = curve_fit(fit_func, times, cmp_lc_normed, p0=[-0.1, 1])
+
+            detrended = cmp_lc_normed - fit_func(times, *popt)
+            detrended_std = detrended.std()
+
+            if detrended_std > max_detrended_normed_std:
+                remove_columns.append(col)
+
+        print(
+            f"Removing ref stars {remove_columns} because max_detrended_normed_std > {max_detrended_normed_std}."
+        )
+        light_curves_df.drop(columns=remove_columns, inplace=True)
+        return light_curves_df
+
+    def get_airmass(self, times):
+        goe = EarthLocation(lat=51.561 * u.deg, lon=9.944 * u.deg, height=390 * u.m)
+        frame = AltAz(obstime=times, location=goe)
+        target_altaz = self.target_coord.transform_to(frame)
+        airmass = target_altaz.secz
+        return times.plot_date, airmass
+
+
+class LightCurvesExtractor:
+    """ Extracts all potential ref star and the target light curves from catalogs of transit images."""
+
+    def __init__(
+        self,
+        image_catalogs: [],
+        target_coord: SkyCoord,
+        one_image_for_plot: np.ndarray = None,
+        max_allowed_pixel_value: float = 5e4,
+        max_allowed_source_ellipticity: float = 0.4,
+        min_allowed_source_fwhm: float = 2.5,
     ):
         self.full_image_catalogs: [pd.DataFrame] = image_catalogs
         self.target_coord: SkyCoord = target_coord
 
         self.one_image_for_plot = one_image_for_plot
 
+        # filters sources by following criteria
+        self.max_allowed_pixel_value = max_allowed_pixel_value
+        self.max_allowed_source_ellipticity = max_allowed_source_ellipticity
+        self.min_allowed_source_fwhm = min_allowed_source_fwhm
+
         self.ref_catalog: Union[pd.DataFrame, None] = None
         self.target_id: Union[int, None] = None
         self.matched_image_catalogs_with_target: Union[list, None] = None
 
-    def get_best_relative_light_curve(
+    def get_target_and_ref_stars_light_curves_df(
         self,
         flux_column_name: str = "flux",
         use_only_n_brightest_ref_sources: int = None,
-    ):
-        (
-            target_light_curve,
-            cmp_light_curves,
-        ) = self.get_target_and_ref_stars_light_curves(
-            flux_column_name=flux_column_name,
-            use_only_n_brightest_ref_sources=use_only_n_brightest_ref_sources,
-        )
-        cmp_light_curves = self.filter_noisy_light_curves(cmp_light_curves)
-        target_relative_light_curve = target_light_curve / cmp_light_curves.sum(
-            axis="columns"
-        )
-
-        return target_relative_light_curve, cmp_light_curves
-
-    def get_target_and_ref_stars_light_curves(
-        self,
-        flux_column_name: str = "flux",
-        use_only_n_brightest_ref_sources: int = None,
-    ):
+    ) -> pd.DataFrame:
 
         self.build_and_match_ref_source_catalog(
             use_only_n_brightest_ref_sources, flux_column_name
@@ -74,7 +172,9 @@ class LightCurveExtractor:
             verbose=True,
         )
 
-        return target_light_curve, cmp_light_curves
+        light_curve_df = cmp_light_curves
+        light_curve_df["target"] = target_light_curve
+        return light_curve_df
 
     def build_and_match_ref_source_catalog(
         self,
@@ -92,7 +192,7 @@ class LightCurveExtractor:
             return
 
         ref_catalog, ref_catalog_coords = self.get_ref_catalog_from_catalog(
-            self.full_image_catalogs[100]
+            self.full_image_catalogs[0]
         )
         self.target_id = self.find_target_id(ref_catalog_coords)
         print(f"Starting with {len(ref_catalog)} reference sources.")
@@ -126,10 +226,12 @@ class LightCurveExtractor:
     def get_ref_catalog_from_catalog(self, catalog: pd.DataFrame):
         ref_catalog: pd.DataFrame = copy.deepcopy(catalog)
 
-        ref_catalog = ref_catalog[ref_catalog["fwhm"] > 2.5]
+        ref_catalog = ref_catalog[ref_catalog["peak"] < self.max_allowed_pixel_value]
+        ref_catalog = ref_catalog[
+            ref_catalog["ellipticity"] < self.max_allowed_source_ellipticity
+        ]
+        ref_catalog = ref_catalog[ref_catalog["fwhm"] > self.min_allowed_source_fwhm]
         # ref_catalog = ref_catalog[ref_catalog["flux"] > 8e2]
-        # # ref_catalog = ref_catalog[ref_catalog['peak'] > 5e2]
-        ref_catalog = ref_catalog[ref_catalog["peak"] < 5e4]
         ref_catalog.index = list(range(len(ref_catalog)))
         ref_catalog["id"] = list(range(len(ref_catalog)))
 
@@ -189,7 +291,8 @@ class LightCurveExtractor:
                 filtered_ref_catalog.append(
                     ref_catalog[ref_catalog.id == self.target_id]
                 )
-        return filtered_ref_catalog
+            return filtered_ref_catalog
+        return ref_catalog
 
     def enforce_each_ref_source_exactly_once_per_image_and_valid_flux(
         self, image_catalogs: [pd.DataFrame], ref_catalog, flux_column_name
@@ -201,7 +304,10 @@ class LightCurveExtractor:
         ids = ref_catalog.id
         source_flux_values = pd.DataFrame(index=times, columns=ids)
 
-        for catalog in image_catalogs:
+        for i_cat, catalog in enumerate(image_catalogs):
+            if i_cat % 100 == 0:
+                print("Checking frame %d/%d ..." % (i_cat, len(image_catalogs) - 1))
+
             time = catalog.iloc[0].time
             for id in ids:
                 try:
@@ -220,7 +326,7 @@ class LightCurveExtractor:
         ].index
 
         print(
-            f"Removing these ref_sources b/c they are not exactly once in each image or have {flux_column_name} value nan: {remove_ref_sources_ids}"
+            f"Removing these ref_sources b/c they are not exactly once in each image or have '{flux_column_name}' value nan: {remove_ref_sources_ids}"
         )
         for remove_sources_id in remove_ref_sources_ids:
             ref_catalog.drop(labels=remove_sources_id, axis="index", inplace=True)
@@ -240,50 +346,6 @@ class LightCurveExtractor:
             light_curves[id] = column
 
         return light_curves
-
-    def filter_noisy_light_curves(
-        self, cmp_light_curves, max_detrended_normed_std: float = 0.01
-    ):
-        """Filters out light curves of ref sources that are noisy. For that it detrends the normed light curves
-        with a linear function of the airmass. Ref sources with detrended normed light curves with standard
-        deviation > max_detrended_normed_std are removed.
-
-        :param cmp_light_curves:
-        :param max_detrended_normed_std:
-        :return: filtered light curves
-        """
-        times = Time(cmp_light_curves.index, format="jd")
-        times, airmass = self.get_airmass(times)
-        airmass_func = interpolate.interp1d(times, airmass, kind="linear")
-
-        remove_columns = []
-        for col in cmp_light_curves.columns:
-            cmp_lc = cmp_light_curves[col]
-            cmp_lc_normed = cmp_lc / cmp_lc.mean()
-            # print(cmp_lc.mean(), cmp_lc, cmp_lc_normed, )
-            def fit_func(time, m, b):
-                return m * airmass_func(time) + b
-
-            popt, pcov = curve_fit(fit_func, times, cmp_lc_normed, p0=[-0.1, 1])
-
-            detrended = cmp_lc_normed - fit_func(times, *popt)
-            detrended_std = detrended.std()
-
-            if detrended_std > max_detrended_normed_std:
-                remove_columns.append(col)
-
-        print(
-            f"Removing ref stars {remove_columns} because max_detrended_normed_std > {max_detrended_normed_std}."
-        )
-        cmp_light_curves.drop(columns=remove_columns)
-        return cmp_light_curves
-
-    def get_airmass(self, times):
-        goe = EarthLocation(lat=51.561 * u.deg, lon=9.944 * u.deg, height=390 * u.m)
-        frame = AltAz(obstime=times, location=goe)
-        target_altaz = self.target_coord.transform_to(frame)
-        airmass = target_altaz.secz
-        return times.plot_date, airmass
 
     def plot_ref_sources_on_image(self, ref_catalog):
         if self.one_image_for_plot is None:
