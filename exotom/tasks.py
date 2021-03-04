@@ -87,8 +87,6 @@ def analyse_observation_record(observation_record):
 
             if created:
                 save_dataproduct_file(dp, product)
-        print("sleeping")
-        time.sleep(100)
         data_processor = TransitProcessor()
         data_processor.process_transit_dataproductgroup(transit_dataproduct_group)
     except Exception as e:
