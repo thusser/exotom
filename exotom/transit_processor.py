@@ -12,16 +12,18 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from tom_dataproducts.models import DataProductGroup, DataProduct
 
-from exotom.photometry import LightCurveExtractor
+from exotom.photometry import TransitLightCurveExtractor
 
 MAX_SEPARATION_TO_CATALOG_IN_DEG = 5 / 3600
 
 
 class TransitProcessor:
     def process_transit_dataproductgroup(self, data_product_group: DataProductGroup):
-        """Processes the data products in the data group
+        """Processes the data products in the data group. Creates one DataProduct of type "transit_light_curve"
+        which is a csv file containing the reference star light curves in one column each and one column
+        for the target light curve ("target") and one for the target relativ light curve ("target_rel").
 
-        :raises ValueError if data_product_group contains no DataProducts or DataProducts
+        :raises ValueError if data_product_group contains no DataProducts or data_product_types
         other than "photometry_catalog"s.
         """
         dps: [DataProduct] = data_product_group.dataproduct_set.all()
@@ -34,14 +36,13 @@ class TransitProcessor:
 
         first_dp = dps[0]
 
-        data_directory = os.path.dirname(first_dp.data.path)
         target_coord = SkyCoord(first_dp.target.ra * u.deg, first_dp.target.dec * u.deg)
 
-        image_catalogs: [] = self.load_data_from_directory_of_csv_catalogs(
-            data_directory
+        image_catalogs: [] = self.load_data_from_dataproduct_list(dps)
+        tlce = TransitLightCurveExtractor(image_catalogs, target_coord)
+        best_light_curve_df: pd.DataFrame = (
+            tlce.get_best_relative_transit_light_curve_dataframe()
         )
-        lce = LightCurveExtractor(image_catalogs, target_coord)
-        light_curve_df: pd.DataFrame = lce.get_best_relative_light_curve_dataframe()
 
         light_curve_name: str = (
             f"{first_dp.target.name} transit #{first_dp.observation_record.parameters_as_dict['transit']}"
@@ -49,9 +50,9 @@ class TransitProcessor:
         )
 
         light_curve_dp: DataProduct = self.save_light_curve_dataproduct_and_file(
-            first_dp, light_curve_df, light_curve_name
+            first_dp, best_light_curve_df, light_curve_name
         )
-        self.create_light_curve_thumbnail(light_curve_df, light_curve_dp)
+        self.create_light_curve_thumbnail(best_light_curve_df, light_curve_dp)
 
         return light_curve_dp
 
@@ -80,6 +81,22 @@ class TransitProcessor:
         return light_curve_dp
 
     @staticmethod
+    def load_data_from_dataproduct_list(dps: [DataProduct], verbose=True):
+        print("Starting data load from dataproduct list")
+        start = time.time()
+        image_catalogs = []
+        files = sorted([dp.data.path for dp in dps])
+        print(f"Found {len(files)} files.")
+        for i, filename in enumerate(sorted(files), 1):
+            if verbose or i % 100 == 0:
+                print("(%d/%d) Loading %s..." % (i, len(files), filename))
+
+            cat = pd.read_csv(filename)
+            image_catalogs.append(cat)
+        print("Load took %.2fs" % (time.time() - start,))
+        return image_catalogs
+
+    @staticmethod
     def load_data_from_directory_of_csv_catalogs(data_directory, verbose=False) -> []:
         print("Starting data load from directory of csv catalogs")
         start = time.time()
@@ -104,7 +121,7 @@ class TransitProcessor:
         plt.title(f"Relative Normalized {light_curve_dp.product_id}")
         plt.scatter(
             light_curve_df.index,
-            light_curve_df["target_rel"] / light_curve_df["target_rel"].mean(),
+            light_curve_df["target"] / light_curve_df["target_rel"].mean(),
             marker="x",
             linewidth=1,
         )
