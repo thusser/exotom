@@ -170,13 +170,13 @@ def attempt_image_catalog_download(product, n_attempts):
         try:
             product_data = requests.get(
                 product["url"].replace("download", "catalog"),
-                headers=IAGFacility()._archive_headers(),
+                headers=IAGFacility().archive_headers(),
             ).content
             time_str = product["created"]
             break
         except Exception as e:
             print(
-                f"Data request to {product['url']} failed due to '{e}'. {2 - attempts} left..."
+                f"Data request to {product['url']} failed due to '{e}'. {2 - attempts} attempts left..."
             )
             time.sleep(0.5)
     else:
