@@ -1,4 +1,4 @@
-import io, os, time, requests
+import io, os, time, requests, traceback
 import pandas as pd
 from astropy.time import Time
 
@@ -62,7 +62,10 @@ def attempt_analyse_transit_observation(observation_record):
         try:
             analyse_observation_record(observation_record)
         except Exception as e:
-            raise e
+            print(
+                f"Analysis of ObservationRecord {observation_record} failed due to '{e}'. Traceback:"
+            )
+            traceback.print_exc()
         finally:
             # unlock observation_record
             observation_record.status = "COMPLETED"
@@ -81,7 +84,7 @@ def analyse_observation_record(observation_record):
                     f"creating data product {i_product}/{len(reduced_products)}: {product}"
                 )
 
-            dp, created = get_or_create_photometry_catalog_dataproduct(
+            dp, created = get_or_create_image_photometry_catalog_dataproduct(
                 observation_record, product, transit_dataproduct_group
             )
 
@@ -92,7 +95,7 @@ def analyse_observation_record(observation_record):
     except Exception as e:
         raise e
     finally:
-        clean_up_photometry_catalog_dataproducts(transit_dataproduct_group)
+        clean_up_image_photometry_catalog_dataproducts(transit_dataproduct_group)
 
 
 def transit_light_curve_dataproduct_exists_for_observation_record(observation_record):
@@ -142,14 +145,14 @@ def create_transit_dataproduct_group(observation_record):
     return transit_dp_group
 
 
-def get_or_create_photometry_catalog_dataproduct(
+def get_or_create_image_photometry_catalog_dataproduct(
     observation_record, product, transit_dp_group
 ):
     dp, created = DataProduct.objects.get_or_create(
         product_id=product["id"],
         target=observation_record.target,
         observation_record=observation_record,
-        data_product_type="photometry_catalog",
+        data_product_type="image_photometry_catalog",
     )
     dp.group.add(transit_dp_group)
     return dp, created
@@ -191,7 +194,7 @@ def get_catalog_dataframe_from_catalog_and_time(product_data, time_datetime):
     return df
 
 
-def clean_up_photometry_catalog_dataproducts(transit_dp_group):
+def clean_up_image_photometry_catalog_dataproducts(transit_dp_group):
     for dp in transit_dp_group.dataproduct_set.all():
         os.remove(dp.data.path)
         dp.delete()
