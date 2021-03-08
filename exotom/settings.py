@@ -210,8 +210,18 @@ FACILITIES = {
 DATA_PRODUCT_TYPES = {
     "photometry": ("photometry", "Photometry"),
     "fits_file": ("fits_file", "FITS File"),
-    "photometry_catalog": ("photometry_catalog", "Photometry Catalog CSV"),
-    "transit_light_curve": ("transit_light_curve", "Transit Light Curve CSV"),
+    "image_photometry_catalog": (
+        "image_photometry_catalog",
+        "Image Photometry Catalog CSV",
+    ),
+    "transit_all_light_curves": (
+        "transit_all_light_curves",
+        "All Ref Star Light Curves CSV",
+    ),
+    "transit_best_light_curves": (
+        "transit_best_light_curves",
+        "Best Transit Light Curves CSV",
+    ),
     "spectroscopy": ("spectroscopy", "Spectroscopy"),
     "image_file": ("image_file", "Image File"),
 }

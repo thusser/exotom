@@ -57,7 +57,7 @@ class Test(TestCase):
             dp = DataProduct.objects.create(
                 target=self.target1,
                 observation_record=self.obs_record,
-                data_product_type="photometry_catalog",
+                data_product_type="image_photometry_catalog",
             )
             dp.group.add(self.transit_dp_group)
             with open(file_path) as f:
@@ -76,17 +76,21 @@ class Test(TestCase):
         self.transit_processor.process_transit_dataproductgroup(self.transit_dp_group)
 
         photometry_cat_dps = DataProduct.objects.filter(
-            data_product_type="photometry_catalog"
+            data_product_type="image_photometry_catalog"
         )
-        transit_light_curve_dps = DataProduct.objects.filter(
-            data_product_type="transit_light_curve"
+        transit_all_light_curve_dps = DataProduct.objects.filter(
+            data_product_type="transit_all_light_curves"
+        )
+        transit_best_light_curve_dps = DataProduct.objects.filter(
+            data_product_type="transit_best_light_curves"
         )
         image_file_dps = DataProduct.objects.filter(data_product_type="image_file")
 
         self.assertEqual(len(photometry_cat_dps), len(self.file_paths))
-        self.assertEqual(len(transit_light_curve_dps), 1)
+        self.assertEqual(len(transit_all_light_curve_dps), 1)
+        self.assertEqual(len(transit_best_light_curve_dps), 1)
         self.assertEqual(len(image_file_dps), 1)
 
-        transit_light_curve_dp = transit_light_curve_dps[0]
+        transit_light_curve_dp = transit_best_light_curve_dps[0]
         light_curves_df = pd.read_csv(transit_light_curve_dp.data.path)
         self.assertEqual(light_curves_df.shape[0], len(self.file_paths))

@@ -43,7 +43,7 @@ class TransitLightCurveExtractor:
         use_only_n_brightest_ref_sources: int = None,
         force_recalculate: bool = False,
     ):
-        if not self.light_curves_df or force_recalculate:
+        if self.light_curves_df is None or force_recalculate:
             self.light_curves_df = self.lce.get_target_and_ref_stars_light_curves_df(
                 flux_column_name, use_only_n_brightest_ref_sources
             )

@@ -11,10 +11,9 @@ from astropy.time import Time
 from django.core.files import File
 from django.core.files.base import ContentFile
 from tom_dataproducts.models import DataProductGroup, DataProduct
+from tom_targets.models import Target
 
 from exotom.photometry import TransitLightCurveExtractor
-
-MAX_SEPARATION_TO_CATALOG_IN_DEG = 5 / 3600
 
 
 class TransitProcessor:
@@ -35,50 +34,66 @@ class TransitProcessor:
         print(f"Transit processing {len(dps)} data products: {dps}")
 
         first_dp = dps[0]
-
-        target_coord = SkyCoord(first_dp.target.ra * u.deg, first_dp.target.dec * u.deg)
-
-        image_catalogs: [] = self.load_data_from_dataproduct_list(dps)
-        tlce = TransitLightCurveExtractor(image_catalogs, target_coord)
-        best_light_curve_df: pd.DataFrame = (
-            tlce.get_best_relative_transit_light_curve_dataframe()
-        )
-
         light_curve_name: str = (
-            f"{first_dp.target.name} transit #{first_dp.observation_record.parameters['transit']}"
+            f"{first_dp.target.name}_transit_#{first_dp.observation_record.parameters['transit']}"
             f"_light_curve"
         )
+        target: Target = first_dp.target
+        target_coord = SkyCoord(target.ra * u.deg, target.dec * u.deg)
 
-        light_curve_dp: DataProduct = self.save_light_curve_dataproduct_and_file(
-            first_dp, best_light_curve_df, light_curve_name
+        image_catalogs: [] = self.load_data_from_dataproduct_list(dps)
+
+        transit_lc_extractor = TransitLightCurveExtractor(image_catalogs, target_coord)
+
+        all_light_curves_df = transit_lc_extractor.get_all_light_curves_dataframe(
+            flux_column_name="flux"
         )
-        self.create_light_curve_thumbnail(best_light_curve_df, light_curve_dp)
+        all_light_curves_dp = self.save_dataframe_as_dataproduct_and_csv_file(
+            all_light_curves_df,
+            product_id=light_curve_name + "_all",
+            target=target,
+            observation_record=first_dp.observation_record,
+            data_product_type="transit_all_light_curves",
+        )
 
-        return light_curve_dp
+        best_light_curve_df = (
+            transit_lc_extractor.get_best_relative_transit_light_curve_dataframe()
+        )
+        best_light_curves_dp = self.save_dataframe_as_dataproduct_and_csv_file(
+            all_light_curves_df,
+            product_id=light_curve_name + "_best",
+            target=target,
+            observation_record=first_dp.observation_record,
+            data_product_type="transit_best_light_curves",
+        )
+
+        self.create_light_curve_thumbnail(best_light_curve_df, best_light_curves_dp)
+
+        return all_light_curves_dp, best_light_curves_dp
 
     def check_all_dataproducts_are_photometry_catalogs(self, dps):
         for dp in dps:
-            if dp.data_product_type != "photometry_catalog":
+            if dp.data_product_type != "image_photometry_catalog":
                 raise ValueError(
-                    f"DataGroup contains none 'photometry_catalog' DataProducts (due to {dp})."
+                    f"DataGroup contains none 'image_photometry_catalog' DataProducts (due to {dp})."
                 )
 
-    def save_light_curve_dataproduct_and_file(
-        self, first_dp, light_curve_df, light_curve_name
-    ):
-        light_curve_dp = DataProduct.objects.create(
-            product_id=light_curve_name,
-            target=first_dp.target,
-            observation_record=first_dp.observation_record,
-            data_product_type="transit_light_curve",
+    def save_dataframe_as_dataproduct_and_csv_file(
+        self, df, product_id, target, observation_record, data_product_type
+    ) -> DataProduct:
+        dp = DataProduct.objects.create(
+            product_id=product_id,
+            target=target,
+            observation_record=observation_record,
+            data_product_type=data_product_type,
         )
-        dfile = ContentFile(light_curve_df.to_csv())
-        light_curve_dp.data.save(
-            light_curve_name + ".csv",
+        dfile = ContentFile(df.to_csv())
+        dp.data.save(
+            product_id + ".csv",
             dfile,
         )
-        light_curve_dp.save()
-        return light_curve_dp
+        dp.save()
+        return dp
 
     @staticmethod
     def load_data_from_dataproduct_list(dps: [DataProduct], verbose=True):
@@ -121,7 +136,7 @@ class TransitProcessor:
         plt.title(f"Relative Normalized {light_curve_dp.product_id}")
         plt.scatter(
             light_curve_df.index,
-            light_curve_df["target"] / light_curve_df["target_rel"].mean(),
+            light_curve_df["target_rel"] / light_curve_df["target_rel"].mean(),
             marker="x",
             linewidth=1,
         )
