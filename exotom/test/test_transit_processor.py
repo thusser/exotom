@@ -46,7 +46,7 @@ class Test(TestCase):
             target=self.target1,
             facility="IAGTransit",
             observation_id=self.obs_id,
-            parameters='{"transit": ' + str(self.transit_number) + "}",
+            parameters={"transit": self.transit_number},
         )
 
         self.transit_dp_group = DataProductGroup(

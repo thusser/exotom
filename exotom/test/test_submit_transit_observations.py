@@ -65,7 +65,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10026.676212000004,
+                                        "repeat_duration": 10026.676211999995,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -117,7 +117,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10037.550435999996,
+                                        "repeat_duration": 10037.550435999981,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -296,7 +296,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10026.676212000004,
+                                    "repeat_duration": 10026.676211999995,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -386,7 +386,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10026.676212000004,
+                                    "repeat_duration": 10026.676211999995,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",

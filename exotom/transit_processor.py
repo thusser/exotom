@@ -45,7 +45,7 @@ class TransitProcessor:
         )
 
         light_curve_name: str = (
-            f"{first_dp.target.name} transit #{first_dp.observation_record.parameters_as_dict['transit']}"
+            f"{first_dp.target.name} transit #{first_dp.observation_record.parameters['transit']}"
             f"_light_curve"
         )
 

@@ -45,7 +45,7 @@ def process_new_observations():
         try:
             attempt_analyse_transit_observation(observation_record)
         except Exception as e:
-            print(f"Tranit analysis failed becase of '{e}'")
+            print(f"Transit analysis failed because of '{e}'")
 
 
 def attempt_analyse_transit_observation(observation_record):
@@ -134,9 +134,9 @@ def get_reduced_data_products_and_check_pipeline_finished(
 
 
 def create_transit_dataproduct_group(observation_record):
-    # transit_number = observation_record.parameters_as_dict["transit"]
+    transit_number = observation_record.parameters["transit"]
     transit_dp_group = DataProductGroup(
-        name=f"Target {observation_record.target.name}, transit #"  # {transit_number}"
+        name=f"Target {observation_record.target.name}, transit #{transit_number}"
     )
     transit_dp_group.save()
     return transit_dp_group

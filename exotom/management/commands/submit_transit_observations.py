@@ -83,7 +83,7 @@ def submit_transit_to_instrument(
         record = ObservationRecord.objects.create(
             target=transit.target,
             facility="IAGTransit",
-            parameters=form.serialize_parameters(),
+            parameters=form.cleaned_data,
             observation_id=observation_id,
         )
 
