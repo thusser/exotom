@@ -1,5 +1,5 @@
 wheel
-tomtoolkit >= 2.0.0
+tomtoolkit == 2.5.1
 pandas
 gunicorn
 celery
