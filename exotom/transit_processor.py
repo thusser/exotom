@@ -34,9 +34,13 @@ class TransitProcessor:
         print(f"Transit processing {len(dps)} data products: {dps}")
 
         first_dp = dps[0]
+
+        try:
+            transit_number = first_dp.observation_record.parameters["transit"]
+        except (KeyError, IndexError):
+            transit_number = "unknown"
         light_curve_name: str = (
-            f"{first_dp.target.name}_transit_#{first_dp.observation_record.parameters['transit']}"
-            f"_light_curve"
+            f"{first_dp.target.name}_transit_#{transit_number}" f"_light_curve"
         )
         target: Target = first_dp.target
         target_coord = SkyCoord(target.ra * u.deg, target.dec * u.deg)

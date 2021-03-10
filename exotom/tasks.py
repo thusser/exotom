@@ -142,7 +142,10 @@ def get_reduced_data_products_and_check_pipeline_finished(
 
 
 def create_transit_dataproduct_group(observation_record):
-    transit_number = observation_record.parameters["transit"]
+    try:
+        transit_number = observation_record.parameters["transit"]
+    except (KeyError, IndexError):
+        transit_number = "unknown"
     transit_dp_group = DataProductGroup(
         name=f"Target {observation_record.target.name}, transit #{transit_number}"
     )
