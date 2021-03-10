@@ -36,6 +36,11 @@ def update_observation_status():
     for target in Target.objects.all():
         call_command("updatestatus", target_id=target.id)
 
+    # delete
+    for obs_record in ObservationRecord.objects.all():
+        if obs_record.status in ["CANCELED", "WINDOW_EXPIRED"]:
+            obs_record.delete()
+
 
 @app.task
 def process_new_observations():
