@@ -35,6 +35,8 @@ except (AttributeError, KeyError):
 
 
 class IAGTransitForm(IAGImagingObservationForm):
+    name = forms.CharField(max_length=200)
+
     def __init__(self, *args, **kwargs):
         IAGImagingObservationForm.__init__(self, *args, **kwargs)
 
@@ -164,7 +166,7 @@ class IAGTransitForm(IAGImagingObservationForm):
 
         # build payload
         payload = {
-            "name": "%s #%d" % (target.name, transit.number),
+            "name": self.cleaned_data["name"],
             "proposal": proposal,
             "ipp_value": self.cleaned_data["ipp_value"],
             "operator": "SINGLE",
@@ -181,6 +183,7 @@ class IAGTransitForm(IAGImagingObservationForm):
 
 
 class IAGTransitSingleContactForm(IAGImagingObservationForm):
+    name = forms.CharField(max_length=200)
     contact = forms.CharField(max_length=20)
 
     def __init__(self, *args, **kwargs):
@@ -289,11 +292,11 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
         contact = self.cleaned_data["contact"]
 
         # calculate start, end and duration
-        if contact == "ingress":
+        if contact == "INGRESS":
             start = Time(transit.start_earliest()) - 15 * u.min
             end = Time(transit.start_latest()) + 15 * u.min
             duration = end - start
-        elif contact == "egress":
+        elif contact == "EGRESS":
             start = Time(transit.end_earliest()) - 15 * u.min
             end = Time(transit.end_latest()) + 15 * u.min
             duration = end - start
@@ -337,7 +340,7 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
 
         # build payload
         payload = {
-            "name": f"{target.name} #{transit.number} {self.cleaned_data['contact'].upper()}",
+            "name": self.cleaned_data["name"],
             "proposal": proposal,
             "ipp_value": self.cleaned_data["ipp_value"],
             "operator": "SINGLE",

@@ -95,6 +95,7 @@ def get_observation_data(
     exposure_time = calculate_exposure_time(magnitude)
 
     data = {
+        "name": f"{transit.target.name} #{transit.number}",
         "facility": "IAGTransit",
         "instrument_type": instrument_type,
         "transit": transit.number,
