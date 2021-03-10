@@ -119,7 +119,7 @@ class TransitProcessor:
         files = sorted(glob.glob(os.path.join(data_directory, "*.csv")))
         print(f"Found {len(files)} files.")
         for i, filename in enumerate(sorted(files), 1):
-            if verbose or i % 100 == 0:
+            if verbose and i % 100 == 0:
                 print("(%d/%d) Loading %s..." % (i, len(files), filename))
 
             cat = pd.read_csv(filename)
