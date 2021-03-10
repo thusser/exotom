@@ -144,7 +144,9 @@ class LightCurvesExtractor:
         max_allowed_source_ellipticity: float = 0.4,
         min_allowed_source_fwhm: float = 2.5,
     ):
-        self.full_image_catalogs: [pd.DataFrame] = image_catalogs
+        self.full_image_catalogs: [pd.DataFrame] = self.filter_out_incomplete_catalogs(
+            image_catalogs
+        )
         self.target_coord: SkyCoord = target_coord
 
         self.one_image_for_plot = one_image_for_plot
@@ -379,3 +381,15 @@ class LightCurvesExtractor:
                 color="black",
             )
         plt.show()
+
+    def filter_out_incomplete_catalogs(self, image_catalogs):
+
+        required_columns = ["ra", "dec", "time", "flux"]
+        filtered_catalogs = []
+        for cat in image_catalogs:
+            for required_column in required_columns:
+                if required_column not in cat.columns:
+                    break
+            else:  # nobreak
+                filtered_catalogs.append(cat)
+        return filtered_catalogs
