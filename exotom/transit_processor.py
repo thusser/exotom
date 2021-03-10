@@ -59,7 +59,7 @@ class TransitProcessor:
             transit_lc_extractor.get_best_relative_transit_light_curve_dataframe()
         )
         best_light_curves_dp = self.save_dataframe_as_dataproduct_and_csv_file(
-            all_light_curves_df,
+            best_light_curve_df,
             product_id=light_curve_name + "_best",
             target=target,
             observation_record=first_dp.observation_record,
