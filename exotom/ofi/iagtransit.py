@@ -36,6 +36,7 @@ except (AttributeError, KeyError):
 
 class IAGTransitForm(IAGImagingObservationForm):
     name = forms.CharField(max_length=200)
+    transit_id = forms.IntegerField()
 
     def __init__(self, *args, **kwargs):
         IAGImagingObservationForm.__init__(self, *args, **kwargs)
@@ -185,6 +186,7 @@ class IAGTransitForm(IAGImagingObservationForm):
 class IAGTransitSingleContactForm(IAGImagingObservationForm):
     name = forms.CharField(max_length=200)
     contact = forms.CharField(max_length=20)
+    transit_id = forms.IntegerField()
 
     def __init__(self, *args, **kwargs):
         IAGImagingObservationForm.__init__(self, *args, **kwargs)

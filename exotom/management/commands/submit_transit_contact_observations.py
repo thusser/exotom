@@ -104,6 +104,7 @@ def get_observation_data(
         "facility": "IAGTransit",
         "instrument_type": instrument_type,
         "transit": transit.number,
+        "transit_id": transit.id,
         "contact": contact,
         "target_id": transit.target_id,
         "ipp_value": get_ipp_value(transit),
