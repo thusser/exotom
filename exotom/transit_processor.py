@@ -86,7 +86,7 @@ class TransitProcessor:
             observation_record=observation_record,
             data_product_type=data_product_type,
         )
-        dfile = ContentFile(df.to_csv())
+        dfile = ContentFile(df.to_csv(index_label="time"))
         dp.data.save(
             product_id + ".csv",
             dfile,
