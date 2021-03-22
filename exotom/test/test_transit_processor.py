@@ -68,9 +68,10 @@ class Test(TestCase):
         self.transit_processor = transit_processor.TransitProcessor()
 
     def tearDown(self) -> None:
-        print("Deleting all data product files")
-        for dp in DataProduct.objects.all():
-            os.remove(dp.data.path)
+        pass
+        # print("Deleting all data product files")
+        # for dp in DataProduct.objects.all():
+        #     os.remove(dp.data.path)
 
     def test_simple_processing(self):
         self.transit_processor.process_transit_dataproductgroup(self.transit_dp_group)
