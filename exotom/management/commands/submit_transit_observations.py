@@ -95,9 +95,11 @@ def get_observation_data(
     exposure_time = calculate_exposure_time(magnitude)
 
     data = {
+        "name": f"{transit.target.name} #{transit.number}",
         "facility": "IAGTransit",
         "instrument_type": instrument_type,
         "transit": transit.number,
+        "transit_id": transit.id,
         "target_id": transit.target_id,
         "ipp_value": get_ipp_value(transit),
         "max_airmass": 2.0,  # correspond to alt >= 30°

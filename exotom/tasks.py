@@ -1,4 +1,6 @@
 import io, os, time, requests, traceback
+import json
+
 import pandas as pd
 from astropy.time import Time
 
@@ -16,6 +18,7 @@ from exotom.transit_processor import TransitProcessor
 from exotom.transits import calculate_transits_during_next_n_days
 from exotom.celery import app
 from tom_iag.iag import IAGFacility
+from exotom.settings import FACILITIES
 
 
 @app.task
@@ -142,13 +145,9 @@ def get_reduced_data_products_and_check_pipeline_finished(
 
 
 def create_transit_dataproduct_group(observation_record):
-    try:
-        transit_number = observation_record.parameters["transit"]
-    except (KeyError, IndexError):
-        transit_number = "unknown"
-    transit_dp_group = DataProductGroup(
-        name=f"Target {observation_record.target.name}, transit #{transit_number}"
-    )
+    transit_dp_group_name = get_transit_name(observation_record)
+
+    transit_dp_group = DataProductGroup(name=transit_dp_group_name)
     transit_dp_group.save()
     return transit_dp_group
 
@@ -164,6 +163,21 @@ def get_or_create_image_photometry_catalog_dataproduct(
     )
     dp.group.add(transit_dp_group)
     return dp, created
+
+
+def get_transit_name(observation_record):
+    try:
+        transit_dp_group_name = observation_record.parameters["name"]
+    except:
+        try:
+            transit_number = observation_record.parameters["transit"]
+        except:
+            transit_number = "unknown"
+        transit_dp_group_name = (
+            f"Target {observation_record.target.name}, transit #{transit_number}"
+        )
+
+    return transit_dp_group_name
 
 
 def save_dataproduct_file(dp, product):

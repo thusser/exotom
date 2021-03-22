@@ -52,7 +52,7 @@ def submit_ingresses_egresses_for_transit(
     if transit.ingress_observable_at_site(site=site_name):
         try:
             submit_transit_single_contact_to_instrument(
-                transit, instrument_type, instrument_details, contact="ingress"
+                transit, instrument_type, instrument_details, contact="INGRESS"
             )
         except Exception as e:
             print(f"Error when submitting transit observation to instrument")
@@ -61,7 +61,7 @@ def submit_ingresses_egresses_for_transit(
     if transit.egress_observable_at_site(site=site_name):
         try:
             submit_transit_single_contact_to_instrument(
-                transit, instrument_type, instrument_details, contact="egress"
+                transit, instrument_type, instrument_details, contact="EGRESS"
             )
         except Exception as e:
             print(f"Error when submitting transit observation to instrument")
@@ -100,9 +100,11 @@ def get_observation_data(
     exposure_time = calculate_exposure_time(magnitude)
 
     data = {
+        "name": f"{transit.target.name} #{transit.number} {contact}",
         "facility": "IAGTransit",
         "instrument_type": instrument_type,
         "transit": transit.number,
+        "transit_id": transit.id,
         "contact": contact,
         "target_id": transit.target_id,
         "ipp_value": get_ipp_value(transit),

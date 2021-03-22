@@ -25,6 +25,7 @@ class TransitProcessor:
         :raises ValueError if data_product_group contains no DataProducts or data_product_types
         other than "photometry_catalog"s.
         """
+        transit_name = data_product_group.name
         dps: [DataProduct] = data_product_group.dataproduct_set.all()
 
         if len(dps) == 0:
@@ -35,13 +36,7 @@ class TransitProcessor:
 
         first_dp = dps[0]
 
-        try:
-            transit_number = first_dp.observation_record.parameters["transit"]
-        except (KeyError, IndexError):
-            transit_number = "unknown"
-        light_curve_name: str = (
-            f"{first_dp.target.name}_transit_#{transit_number}" f"_light_curve"
-        )
+        light_curve_name = f"{transit_name}_light_curve"
         target: Target = first_dp.target
         target_coord = SkyCoord(target.ra * u.deg, target.dec * u.deg)
 
@@ -64,7 +59,7 @@ class TransitProcessor:
             transit_lc_extractor.get_best_relative_transit_light_curve_dataframe()
         )
         best_light_curves_dp = self.save_dataframe_as_dataproduct_and_csv_file(
-            all_light_curves_df,
+            best_light_curve_df,
             product_id=light_curve_name + "_best",
             target=target,
             observation_record=first_dp.observation_record,
@@ -107,7 +102,7 @@ class TransitProcessor:
         files = sorted([dp.data.path for dp in dps])
         print(f"Found {len(files)} files.")
         for i, filename in enumerate(sorted(files), 1):
-            if verbose or i % 100 == 0:
+            if verbose and i % 100 == 0:
                 print("(%d/%d) Loading %s..." % (i, len(files), filename))
 
             cat = pd.read_csv(filename)
@@ -169,7 +164,7 @@ class TransitProcessor:
         files = sorted(glob.glob(os.path.join(data_directory, "*.fits.gz")))
         for i, filename in enumerate(sorted(files), 1):
             # load data
-            if verbose or i % 50 == 0:
+            if verbose and i % 50 == 0:
                 print("(%d/%d) Loading %s..." % (i, len(files), filename))
 
             if i == 100:

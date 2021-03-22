@@ -54,7 +54,7 @@ class TransitLightCurveExtractor:
         :returns pd.DataFrame that contains the lightcurves of good reference stars and target
         and relative light curve of target
         """
-        light_curves_df = self.get_all_light_curves_dataframe()
+        light_curves_df = copy.deepcopy(self.get_all_light_curves_dataframe())
 
         filtered_light_curves = self.filter_noisy_light_curves(light_curves_df)
 
@@ -84,31 +84,42 @@ class TransitLightCurveExtractor:
         :param max_detrended_normed_std:
         :return: filtered light curves
         """
-        times = Time(light_curves_df.index, format="jd")
-        times, airmass = self.get_airmass(times)
-        airmass_func = interpolate.interp1d(times, airmass, kind="linear")
+        # times = Time(light_curves_df.index, format="jd")
+        # times, airmass = self.get_airmass(times)
+        # airmass_func = interpolate.interp1d(times, airmass, kind="linear")
 
-        remove_columns = []
         ref_star_columns = [
             col for col in light_curves_df.columns if col not in ["target"]
         ]
+        target_lc_normed = light_curves_df["target"] / light_curves_df["target"].mean()
+        relative_light_curves_stds = {}
         for col in ref_star_columns:
             cmp_lc = light_curves_df[col]
             cmp_lc_normed = cmp_lc / cmp_lc.mean()
             # print(cmp_lc.mean(), cmp_lc, cmp_lc_normed, )
-            def fit_func(time, m, b):
-                return m * airmass_func(time) + b
+            # def fit_func(time, m, b):
+            #     return m * airmass_func(time) + b
+            #
+            # popt, pcov = curve_fit(fit_func, times, cmp_lc_normed, p0=[-0.1, 1])
 
-            popt, pcov = curve_fit(fit_func, times, cmp_lc_normed, p0=[-0.1, 1])
+            cmp_rel_lc = target_lc_normed / cmp_lc_normed
 
-            detrended = cmp_lc_normed - fit_func(times, *popt)
-            detrended_std = detrended.std()
+            rel_lc_std = cmp_rel_lc.std()
 
-            if detrended_std > max_detrended_normed_std:
-                remove_columns.append(col)
+            relative_light_curves_stds[col] = rel_lc_std
 
+        # kappa sigma clip on the standard deviation of relative lightcurves
+        kappa = 0.5
+        avg = np.mean(list(relative_light_curves_stds.values()))
+        std = np.std(list(relative_light_curves_stds.values()))
+
+        remove_columns = [
+            col
+            for col, col_std in relative_light_curves_stds.items()
+            if col_std > avg + kappa * std
+        ]
         print(
-            f"Removing ref stars {remove_columns} because max_detrended_normed_std > {max_detrended_normed_std}."
+            f"Removing ref stars {remove_columns} because relative_light_curves_stds > avg + {kappa} * sigma."
         )
         light_curves_df.drop(columns=remove_columns, inplace=True)
         return light_curves_df
@@ -133,7 +144,9 @@ class LightCurvesExtractor:
         max_allowed_source_ellipticity: float = 0.4,
         min_allowed_source_fwhm: float = 2.5,
     ):
-        self.full_image_catalogs: [pd.DataFrame] = image_catalogs
+        self.full_image_catalogs: [pd.DataFrame] = self.filter_out_incomplete_catalogs(
+            image_catalogs
+        )
         self.target_coord: SkyCoord = target_coord
 
         self.one_image_for_plot = one_image_for_plot
@@ -368,3 +381,15 @@ class LightCurvesExtractor:
                 color="black",
             )
         plt.show()
+
+    def filter_out_incomplete_catalogs(self, image_catalogs):
+
+        required_columns = ["ra", "dec", "time", "flux"]
+        filtered_catalogs = []
+        for cat in image_catalogs:
+            for required_column in required_columns:
+                if required_column not in cat.columns:
+                    break
+            else:  # nobreak
+                filtered_catalogs.append(cat)
+        return filtered_catalogs
