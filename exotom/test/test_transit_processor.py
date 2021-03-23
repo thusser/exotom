@@ -21,8 +21,8 @@ class Test(TestCase):
 
     def tearDown(self) -> None:
         print("Deleting all data product files")
-        # for dp in DataProduct.objects.all():
-        #     os.remove(dp.data.path)
+        for dp in DataProduct.objects.all():
+            os.remove(dp.data.path)
 
     def test_simple_processing_without_fit(self):
         # no transit object is created, so no fit is done
