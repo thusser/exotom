@@ -222,6 +222,10 @@ DATA_PRODUCT_TYPES = {
         "transit_best_light_curves",
         "Best Transit Light Curves CSV",
     ),
+    "transit_fit_report": (
+        "transit_fit_report",
+        "Log from transit fit TXT",
+    ),
     "spectroscopy": ("spectroscopy", "Spectroscopy"),
     "image_file": ("image_file", "Image File"),
 }
@@ -275,6 +279,12 @@ EXTRA_FIELDS = [
     {"name": "Duration (hours) err", "type": "number"},
     {"name": "Depth (mmag)", "type": "number"},
     {"name": "Depth (mmag) err", "type": "number"},
+    {"name": "Planet Radius (R_Earth)", "type": "number"},
+    {"name": "Planet Radius (R_Earth) err", "type": "number"},
+    {"name": "Stellar Radius (R_Sun)", "type": "number"},
+    {"name": "Stellar Radius (R_Sun) err", "type": "number"},
+    {"name": "Stellar Distance (pc)", "type": "number"},
+    {"name": "Stellar Distance (pc) err", "type": "number"},
 ]
 
 # Authentication strategy can either be LOCKED (required login for all views)
