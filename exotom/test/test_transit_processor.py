@@ -65,7 +65,9 @@ class Test(TestCase):
             dp.save()
             print(dp.data)
 
-        self.transit_processor = transit_processor.TransitProcessor()
+        self.transit_processor = transit_processor.TransitProcessor(
+            self.transit_dp_group
+        )
 
     def tearDown(self) -> None:
         print("Deleting all data product files")
@@ -73,7 +75,7 @@ class Test(TestCase):
             os.remove(dp.data.path)
 
     def test_simple_processing(self):
-        self.transit_processor.process_transit_dataproductgroup(self.transit_dp_group)
+        self.transit_processor.process_transit_dataproductgroup()
 
         photometry_cat_dps = DataProduct.objects.filter(
             data_product_type="image_photometry_catalog"
