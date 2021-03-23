@@ -21,8 +21,8 @@ class Test(TestCase):
 
     def tearDown(self) -> None:
         print("Deleting all data product files")
-        for dp in DataProduct.objects.all():
-            os.remove(dp.data.path)
+        # for dp in DataProduct.objects.all():
+        #     os.remove(dp.data.path)
 
     def test_simple_processing_without_fit(self):
         # no transit object is created, so no fit is done
@@ -163,11 +163,15 @@ class Test(TestCase):
             data_product_type="transit_best_light_curves"
         )
         image_file_dps = DataProduct.objects.filter(data_product_type="image_file")
+        transit_fit_report = DataProduct.objects.filter(
+            data_product_type="transit_fit_report"
+        )
 
         self.assertEqual(len(photometry_cat_dps), len(file_paths))
         self.assertEqual(len(transit_all_light_curve_dps), 1)
         self.assertEqual(len(transit_best_light_curve_dps), 1)
         self.assertEqual(len(image_file_dps), 1)
+        self.assertEqual(len(transit_fit_report), 1)
 
         transit_light_curve_dp = transit_best_light_curve_dps[0]
         light_curves_df = pd.read_csv(transit_light_curve_dp.data.path)

@@ -88,13 +88,14 @@ class TransitProcessor:
             best_light_curve_df,
             best_fit_result,
         ) = self.get_all_and_best_lightcurves()
-        self.save_lightcurves_and_fit_report_as_dataproducts(
-            all_light_curves_df, best_light_curve_df, best_fit_result
-        )
 
         self.best_fit_result = best_fit_result
         self.all_light_curves_df = all_light_curves_df
         self.best_light_curves_df = best_light_curve_df
+
+        self.save_lightcurves_and_fit_report_as_dataproducts(
+            all_light_curves_df, best_light_curve_df, best_fit_result
+        )
 
     def get_all_and_best_lightcurves(self):
         target_coord = SkyCoord(self.target.ra * u.deg, self.target.dec * u.deg)
