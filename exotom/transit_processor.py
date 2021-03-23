@@ -42,9 +42,13 @@ class TransitProcessor:
                 )
 
     def process_transit_dataproductgroup(self):
-        """Processes the data products in the data group. Creates one DataProduct of type "transit_light_curve"
-        which is a csv file containing the reference star light curves in one column each and one column
-        for the target light curve ("target") and one for the target relativ light curve ("target_rel").
+        """Processes the data products in the data group. Creates three DataProducts
+        - one of type "transit_all_light_curves" which contains all potential reference star lightcurves that fulfill
+            some basic quality criteria (columns are numbers 0, 1, 2...) and a column "target" for the target star flux.
+        - one of type  "transit_best_light_curves" which contains a selection of reference stars which give the best
+            target relativ light curve (in columns "target_rel").
+        These dataproducts have an associated csv file.
+        - one dataproduct which shows and image of the transit with associated jpg file.
 
         :raises ValueError if data_product_group contains no DataProducts or data_product_types
         other than "photometry_catalog"s.
