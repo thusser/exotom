@@ -4,12 +4,13 @@ import astropy.units as u
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import copy
+import copy, pprint
 from typing import Union
 
-from astropy.time import Time
-from scipy.interpolate import interpolate
-from scipy.optimize import curve_fit
+from batman import TransitParams
+
+from exotom.models import Transit
+from exotom.tess_transit_fit import TessTransitFit, FitResult
 
 MAX_SEPARATION_TO_CATALOG_IN_DEG = 5 / 3600
 
@@ -19,6 +20,7 @@ class TransitLightCurveExtractor:
         self,
         image_catalogs: [],
         target_coord: SkyCoord,
+        transit: Transit,
         one_image_for_plot: np.ndarray = None,
         max_allowed_pixel_value: float = 5e4,
         max_allowed_source_ellipticity: float = 0.4,
@@ -26,6 +28,7 @@ class TransitLightCurveExtractor:
     ):
 
         self.target_coord = target_coord
+        self.transit = transit  # can be None if 'transit_id' had not been written to ObservationRecord.parameters
         self.lce = LightCurvesExtractor(
             image_catalogs,
             target_coord,
@@ -49,7 +52,9 @@ class TransitLightCurveExtractor:
             )
         return self.light_curves_df
 
-    def get_best_relative_transit_light_curve_dataframe(self) -> pd.DataFrame:
+    def get_best_relative_transit_light_curve_dataframe(
+        self,
+    ) -> (pd.DataFrame, TransitParams):
         """Filter out ref stars that are noisy from light_curves_df.
         :returns pd.DataFrame that contains the lightcurves of good reference stars and target
         and relative light curve of target
@@ -62,16 +67,28 @@ class TransitLightCurveExtractor:
         filtered_light_curves_with_target_rel_light_curve_df[
             "target_rel"
         ] = filtered_light_curves["target"] / filtered_light_curves[
-            filter(lambda col: col != "target", filtered_light_curves.columns)
+            filter(lambda col: type(col) == int, filtered_light_curves.columns)
         ].sum(
             axis="columns"
         )
+
+        fit_result: Union[FitResult, None] = None
+        if self.transit is not None:
+            print("Doing fit of best relative lightcurve")
+            fit_result = self.make_best_fit(
+                filtered_light_curves_with_target_rel_light_curve_df
+            )
 
         print(
             f"Columns of final best relative transit light curve dataframe: "
             f"{list(filtered_light_curves_with_target_rel_light_curve_df.columns)}"
         )
-        return filtered_light_curves_with_target_rel_light_curve_df
+        return filtered_light_curves_with_target_rel_light_curve_df, fit_result
+
+    def make_best_fit(self, best_light_curves_df):
+        transit_fit = TessTransitFit(best_light_curves_df, self.transit)
+        fit_result = transit_fit.make_simplest_fit()
+        return fit_result
 
     def filter_noisy_light_curves(
         self, light_curves_df, max_detrended_normed_std: float = 0.01
@@ -84,13 +101,11 @@ class TransitLightCurveExtractor:
         :param max_detrended_normed_std:
         :return: filtered light curves
         """
-        # times = Time(light_curves_df.index, format="jd")
+        # times = Time(light_curves_df["time"], format="jd")
         # times, airmass = self.get_airmass(times)
         # airmass_func = interpolate.interp1d(times, airmass, kind="linear")
 
-        ref_star_columns = [
-            col for col in light_curves_df.columns if col not in ["target"]
-        ]
+        ref_star_columns = [col for col in light_curves_df.columns if type(col) == int]
         target_lc_normed = light_curves_df["target"] / light_curves_df["target"].mean()
         relative_light_curves_stds = {}
         for col in ref_star_columns:
@@ -187,6 +202,9 @@ class LightCurvesExtractor:
 
         light_curve_df = cmp_light_curves
         light_curve_df["target"] = target_light_curve
+
+        light_curve_df = light_curve_df.reset_index().rename(columns={"index": "time"})
+
         return light_curve_df
 
     def build_and_match_ref_source_catalog(

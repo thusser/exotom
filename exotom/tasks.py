@@ -99,7 +99,7 @@ def analyse_observation_record(observation_record):
             if created:
                 save_dataproduct_file(dp, product)
         data_processor = TransitProcessor(transit_dataproduct_group)
-        data_processor.process_transit_dataproductgroup()
+        data_processor.process()
     except Exception as e:
         raise e
     finally:

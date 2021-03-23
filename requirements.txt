@@ -1,3 +1,4 @@
+numpy >= 1.20.1
 wheel
 tomtoolkit == 2.5.1
 pandas
@@ -8,3 +9,4 @@ django-celery-beat
 redis
 pre-commit
 matplotlib
+batman-package
