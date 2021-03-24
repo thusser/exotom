@@ -54,7 +54,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 1995.4938119999879,
+                                        "repeat_duration": 1995.493812000007,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",

@@ -2,6 +2,10 @@ FROM python:3.7-slim
 ENV PYTHONUNBUFFERED 1
 RUN mkdir /tom
 WORKDIR /tom
+
+RUN apt-get -y update && apt-get -y install gcc
+#RUN /usr/local/bin/python -m pip install --upgrade pip
+
 COPY requirements.txt /tom/
 RUN pip install -r requirements.txt
 RUN pip install https://github.com/thusser/tom_iag/archive/main.zip
