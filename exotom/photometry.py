@@ -90,20 +90,14 @@ class TransitLightCurveExtractor:
         fit_result = transit_fit.make_simplest_fit()
         return fit_result
 
-    def filter_noisy_light_curves(
-        self, light_curves_df, max_detrended_normed_std: float = 0.01
-    ):
-        """Filters out light curves of ref sources that are noisy. For that it detrends the normed light curves
-        with a linear function of the airmass. Ref sources with detrended normed light curves with standard
-        deviation > max_detrended_normed_std are removed.
+    def filter_noisy_light_curves(self, light_curves_df, kappa: float = 0.5):
+        """Filters out light curves of ref sources that are noisy. For that it calculates the normed relative light curve
+        of the ref source and target and does a kappa-sigma clipping on the stddev of that.
 
         :param cmp_light_curves:
         :param max_detrended_normed_std:
         :return: filtered light curves
         """
-        # times = Time(light_curves_df["time"], format="jd")
-        # times, airmass = self.get_airmass(times)
-        # airmass_func = interpolate.interp1d(times, airmass, kind="linear")
 
         ref_star_columns = [col for col in light_curves_df.columns if type(col) == int]
         target_lc_normed = light_curves_df["target"] / light_curves_df["target"].mean()
@@ -111,11 +105,6 @@ class TransitLightCurveExtractor:
         for col in ref_star_columns:
             cmp_lc = light_curves_df[col]
             cmp_lc_normed = cmp_lc / cmp_lc.mean()
-            # print(cmp_lc.mean(), cmp_lc, cmp_lc_normed, )
-            # def fit_func(time, m, b):
-            #     return m * airmass_func(time) + b
-            #
-            # popt, pcov = curve_fit(fit_func, times, cmp_lc_normed, p0=[-0.1, 1])
 
             cmp_rel_lc = target_lc_normed / cmp_lc_normed
 
@@ -124,7 +113,6 @@ class TransitLightCurveExtractor:
             relative_light_curves_stds[col] = rel_lc_std
 
         # kappa sigma clip on the standard deviation of relative lightcurves
-        kappa = 0.5
         avg = np.mean(list(relative_light_curves_stds.values()))
         std = np.std(list(relative_light_curves_stds.values()))
 
@@ -138,13 +126,6 @@ class TransitLightCurveExtractor:
         )
         light_curves_df.drop(columns=remove_columns, inplace=True)
         return light_curves_df
-
-    def get_airmass(self, times):
-        goe = EarthLocation(lat=51.561 * u.deg, lon=9.944 * u.deg, height=390 * u.m)
-        frame = AltAz(obstime=times, location=goe)
-        target_altaz = self.target_coord.transform_to(frame)
-        airmass = target_altaz.secz
-        return times.plot_date, airmass
 
 
 class LightCurvesExtractor:
