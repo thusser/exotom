@@ -1,3 +1,5 @@
+import datetime
+
 import pytz
 from astroplan import EclipsingSystem, Observer
 from astropy.coordinates import SkyCoord, EarthLocation
@@ -11,9 +13,14 @@ from exotom.ofi.iagtransit import IAGTransitFacility
 from exotom.settings import SITES
 
 
-def calculate_transits_during_next_n_days(target: Target, n_days: int = 10):
-    # init
-    now = Time.now()
+def calculate_transits_during_next_n_days(
+    target: Target, n_days: int = 10, start_time: datetime.datetime = None
+):
+
+    if start_time is not None:
+        now = Time(start_time)
+    else:
+        now = Time.now()
 
     # remove all future transits
     Transit.objects.filter(
