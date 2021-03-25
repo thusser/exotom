@@ -174,7 +174,7 @@ class TransitProcessor:
 
         times = np.array(self.best_light_curves_df["time"])
 
-        plt.figure()
+        plt.figure(figsize=(12, 9))
 
         plt.title(f"Relative normalized {self.best_light_curves_dp.product_id} and fit")
         plt.scatter(
@@ -192,9 +192,12 @@ class TransitProcessor:
                 fitted_model.light_curve(self.best_fit_result.params)
                 + self.best_fit_result.constant_offset
             )
-            plt.plot(times, model_flux)
+            label = self.get_best_fit_params_legend_string()
+            plt.plot(times, model_flux, color="red", label=label)
+            plt.legend()
 
-        plt.savefig(tmpfile.name, format="jpg")
+        plt.tight_layout()
+        plt.savefig(tmpfile.name, format="jpg", dpi=200)
 
         if tmpfile:
             dp, _ = DataProduct.objects.get_or_create(
@@ -209,6 +212,15 @@ class TransitProcessor:
                 dp.data.save(filename, File(f), save=True)
                 dp.save()
             tmpfile.close()
+
+    def get_best_fit_params_legend_string(self):
+        key_val_list = [
+            f"{key}: {val}\n"
+            for key, val in self.best_fit_result.params.__dict__.items()
+        ]
+        label = "".join(key_val_list)
+        label_without_last_new_line = label[:-1]
+        return label_without_last_new_line
 
     @staticmethod
     def load_data_from_dataproduct_list(dps: [DataProduct], verbose=True):
