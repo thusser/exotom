@@ -87,7 +87,7 @@ class TransitLightCurveExtractor:
 
     def make_best_fit(self, best_light_curves_df):
         transit_fit = TessTransitFit(best_light_curves_df, self.transit)
-        fit_result = transit_fit.make_simplest_fit()
+        fit_result = transit_fit.make_simplest_fit_and_report()
         return fit_result
 
     def filter_noisy_light_curves(self, light_curves_df, kappa: float = 0.5):

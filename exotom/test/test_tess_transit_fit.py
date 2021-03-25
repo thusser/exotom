@@ -72,7 +72,7 @@ class Test(TestCase):
         light_curve_df2 = pd.read_csv(self.data_file2)
 
         tess_transit_fit1 = TessTransitFit(light_curve_df1, self.transit1)
-        params1, c1, _ = tess_transit_fit1.make_simplest_fit()
+        params1, c1, _ = tess_transit_fit1.make_simplest_fit_and_report()
 
         self.assertAlmostEqual(params1.a, 1.31923941e01, places=2)
         self.assertAlmostEqual(params1.per, 4.68757298e00, places=2)
@@ -82,7 +82,7 @@ class Test(TestCase):
         self.assertAlmostEqual(c1, 5.55937105e-03, places=2)
 
         tess_transit_fit2 = TessTransitFit(light_curve_df2, self.transit2)
-        params2, c2, _ = tess_transit_fit2.make_simplest_fit()
+        params2, c2, _ = tess_transit_fit2.make_simplest_fit_and_report()
 
         self.assertAlmostEqual(params2.a, 1.71652884e01, places=2)
         self.assertAlmostEqual(params2.per, 3.63653789e00, places=2)
