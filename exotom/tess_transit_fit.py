@@ -46,19 +46,35 @@ class TessTransitFit:
 
     def make_simplest_fit(self):
         params: batman.TransitParams = self.get_transit_params_object()
-        fit_a_and_per_func = self.get_a_and_per_fit_function(params)
+
+        fit_a_and_t0_func = self.get_a_t0_and_limb_dark_coeff_fit_function(params)
+
         ts = np.array(self.light_curve_df["time"])
         ys = np.array(
             self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean()
         )
-        constant_offset = 0
-        p0 = [params.a, params.per, params.inc, params.ecc, params.w, constant_offset]
-        bounds = [[0, 0, 0, 0, -360, -np.inf], [np.inf, np.inf, 90, 1, 360, np.inf]]
+
+        constant_factor = 1
+        p0 = [
+            params.a,
+            params.t0,
+            params.inc,
+            params.ecc,
+            params.w,
+            params.u[0],
+            constant_factor,
+        ]
+        bounds = [
+            [0, params.t0 - params.per / 2, 0, 0, -360, 0, -np.inf],
+            [np.inf, params.t0 + params.per / 2, 90, 1, 360, np.inf, np.inf],
+        ]
+
         print(f"Initial batman TransitParams:")
         pprint.pprint(params.__dict__)
         print("\nStarting fit...")
+
         popt, pcov = optimize.curve_fit(
-            fit_a_and_per_func,
+            fit_a_and_t0_func,
             ts,
             ys,
             p0=p0,
@@ -68,7 +84,7 @@ class TessTransitFit:
         )
         perr = np.sqrt(np.diag(pcov))
         print(
-            f"\nFitted parameters and errors: [a, per, inc, ecc, w, constant_offset]: \n{popt}\n{perr}"
+            f"\nFitted parameters and errors: [a, t0, inc, ecc, w, linear_limb_darkening_coeff, constant_factor]: \n{popt}\n{perr}"
         )
         print(f"Covariance matrix: \n{pcov}")
         # plt.ion()
@@ -84,27 +100,33 @@ class TessTransitFit:
         # plt.plot(ts, fit_a_and_per_func(ts, *popt), color='red')
         # plt.pause(100)
         params.a = popt[0]
-        params.per = popt[1]
+        params.t0 = popt[1]
         params.inc = popt[2]
         params.ecc = popt[3]
         params.w = popt[4]
-        constant_offset = popt[5]
+        params.u = [popt[5]]
+        constant_factor = popt[6]
+
         print(f"\nFinal batman TransitParams:")
         pprint.pprint(params.__dict__)
-        return constant_offset, params
 
-    def get_a_and_per_fit_function(self, params):
-        def fit_a_and_per_func(ts, a, per, inc, ecc, w, c):
+        return constant_factor, params
+
+    def get_a_t0_and_limb_dark_coeff_fit_function(self, params):
+        def fit_a_and_t0_func(
+            ts, a, t0, inc, ecc, w, linear_limb_darkening_coeff, constant_factor
+        ):
             params.a = a
-            params.per = per
+            params.t0 = t0
             params.inc = inc
             params.ecc = ecc
             params.w = w
+            params.u = [linear_limb_darkening_coeff]
             model = batman.TransitModel(params, ts)
-            flux = model.light_curve(params) + c
+            flux = model.light_curve(params) * constant_factor
             return flux
 
-        return fit_a_and_per_func
+        return fit_a_and_t0_func
 
     def plot_default_parameters(self):
 
@@ -160,8 +182,8 @@ class TessTransitFit:
         params.inc = 90
         params.ecc = 0
         params.w = 90
-        params.limb_dark = "uniform"
-        params.u = []
+        params.limb_dark = "linear"
+        params.u = [0.4]
 
         return params
 

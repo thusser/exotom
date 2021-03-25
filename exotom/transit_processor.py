@@ -190,7 +190,7 @@ class TransitProcessor:
             fitted_model = batman.TransitModel(self.best_fit_result.params, times)
             model_flux = (
                 fitted_model.light_curve(self.best_fit_result.params)
-                + self.best_fit_result.constant_offset
+                * self.best_fit_result.constant_offset
             )
             label = self.get_best_fit_params_legend_string()
             plt.plot(times, model_flux, color="red", label=label)
