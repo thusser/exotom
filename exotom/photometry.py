@@ -21,6 +21,7 @@ class TransitLightCurveExtractor:
         image_catalogs: [],
         target_coord: SkyCoord,
         transit: Transit,
+        earth_location: EarthLocation,
         one_image_for_plot: np.ndarray = None,
         max_allowed_pixel_value: float = 5e4,
         max_allowed_source_ellipticity: float = 0.4,
@@ -29,6 +30,7 @@ class TransitLightCurveExtractor:
 
         self.target_coord = target_coord
         self.transit = transit  # can be None if 'transit_id' had not been written to ObservationRecord.parameters
+        self.earth_location = earth_location
         self.lce = LightCurvesExtractor(
             image_catalogs,
             target_coord,
@@ -86,8 +88,10 @@ class TransitLightCurveExtractor:
         return filtered_light_curves_with_target_rel_light_curve_df, fit_result
 
     def make_best_fit(self, best_light_curves_df):
-        transit_fit = TessTransitFit(best_light_curves_df, self.transit)
-        fit_result = transit_fit.make_simplest_fit_and_report()
+        transit_fit = TessTransitFit(
+            best_light_curves_df, self.transit, self.earth_location
+        )
+        fit_result = transit_fit.make_simplest_fit_and_report_with_airmass_detrending()
         return fit_result
 
     def filter_noisy_light_curves(self, light_curves_df, kappa: float = 0.5):

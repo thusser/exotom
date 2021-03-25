@@ -8,8 +8,11 @@ import batman
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 from astropy.time import Time
+import astropy.units as u
 from scipy import optimize
+from scipy.interpolate import interpolate
 
 from exotom.models import Transit
 
@@ -26,28 +29,41 @@ def write_stdout_to_stringbfuffer() -> StringIO:
         sys.stdout = old_stdout
 
 
-FitResult = namedtuple("FitResult", ["params", "constant_offset", "fit_report"])
+FitResult = namedtuple("FitResult", ["params", "fitted_model", "fit_report"])
 
 
 class TessTransitFit:
-    def __init__(self, light_curve_df: pd.DataFrame, transit: Transit):
+    def __init__(
+        self,
+        light_curve_df: pd.DataFrame,
+        transit: Transit,
+        earth_location: EarthLocation = None,
+    ):
         self.light_curve_df = light_curve_df
         self.transit = transit
+        self.earth_location = earth_location
 
-    def make_simplest_fit_and_report(self):
+    def make_simplest_fit_and_report_with_airmass_detrending(self):
 
         with write_stdout_to_stringbfuffer() as string_buffer_stdout:
-            constant_offset, params = self.make_simplest_fit()
+            if self.earth_location is not None:
+                # with airmass detrending
+                params, fitted_model = self.make_simplest_fit_with_airmass_detrending()
+            else:
+                # no airmass detrending
+                params, fitted_model = self.make_simplest_fit_no_airmass_detrending()
 
         fit_report = string_buffer_stdout.getvalue()
         print(fit_report)
 
-        return FitResult(params, constant_offset, fit_report)
+        return FitResult(params, fitted_model, fit_report)
 
-    def make_simplest_fit(self):
+    def make_simplest_fit_no_airmass_detrending(self):
         params: batman.TransitParams = self.get_transit_params_object()
 
-        fit_a_and_t0_func = self.get_a_t0_and_limb_dark_coeff_fit_function(params)
+        fit_a_and_t0_func = (
+            self.get_a_t0_and_limb_dark_coeff_fit_function_no_airmass_detrending(params)
+        )
 
         ts = np.array(self.light_curve_df["time"])
         ys = np.array(
@@ -71,7 +87,7 @@ class TessTransitFit:
 
         print(f"Initial batman TransitParams:")
         pprint.pprint(params.__dict__)
-        print("\nStarting fit...")
+        print("\nStarting fit without airmass detrending...")
 
         popt, pcov = optimize.curve_fit(
             fit_a_and_t0_func,
@@ -81,38 +97,31 @@ class TessTransitFit:
             bounds=bounds,
             method="trf",
             verbose=2,
+            xtol=None,
         )
         perr = np.sqrt(np.diag(pcov))
         print(
             f"\nFitted parameters and errors: [a, t0, inc, ecc, w, linear_limb_darkening_coeff, constant_factor]: \n{popt}\n{perr}"
         )
         print(f"Covariance matrix: \n{pcov}")
-        # plt.ion()
-        # plt.figure()
-        # plt.title(f"Relative Normalized Light")
-        # plt.scatter(
-        #     self.light_curve_df['time'],
-        #     self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean(),
-        #     marker="x",
-        #     linewidth=1,
-        # )
-        # plt.plot(ts, fit_a_and_per_func(ts, *p0), color='orange')
-        # plt.plot(ts, fit_a_and_per_func(ts, *popt), color='red')
-        # plt.pause(100)
+
         params.a = popt[0]
         params.t0 = popt[1]
         params.inc = popt[2]
         params.ecc = popt[3]
         params.w = popt[4]
         params.u = [popt[5]]
-        constant_factor = popt[6]
+        # constant_factor = popt[6]
 
         print(f"\nFinal batman TransitParams:")
         pprint.pprint(params.__dict__)
 
-        return constant_factor, params
+        def fitted_model(times):
+            return fit_a_and_t0_func(times, *popt)
 
-    def get_a_t0_and_limb_dark_coeff_fit_function(self, params):
+        return params, fitted_model
+
+    def get_a_t0_and_limb_dark_coeff_fit_function_no_airmass_detrending(self, params):
         def fit_a_and_t0_func(
             ts, a, t0, inc, ecc, w, linear_limb_darkening_coeff, constant_factor
         ):
@@ -128,36 +137,92 @@ class TessTransitFit:
 
         return fit_a_and_t0_func
 
-    def plot_default_parameters(self):
+    def make_simplest_fit_with_airmass_detrending(self):
+        params: batman.TransitParams = self.get_transit_params_object()
 
-        params = self.get_transit_params_object()
-        # ts = np.array(self.light_curve_df.index, dtype='float')
-        start = self.light_curve_df["time"][0]
-        end = self.light_curve_df["time"][len(self.light_curve_df.index) - 1]
-        print(start, end)
-        ts = np.linspace(start, end, 10000)
-        model1 = batman.TransitModel(params, ts)
-        flux1 = model1.light_curve(params)
-
-        params2 = params
-        params2.a = params.a * 2
-        model2 = batman.TransitModel(params, ts)
-        flux2 = model2.light_curve(params)
-
-        plt.ion()
-        plt.figure()
-        plt.title(f"Relative Normalized")
-        plt.scatter(
-            self.light_curve_df["Unnamed: 0"],
-            self.light_curve_df["target_rel"]
-            / self.light_curve_df["target_rel"].mean(),
-            marker="x",
-            linewidth=1,
+        ts = np.array(self.light_curve_df["time"])
+        ys = np.array(
+            self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean()
         )
-        plt.plot(ts, flux1, color="orange")
-        plt.plot(ts, flux2, color="red")
-        plt.pause(100)
-        # plt.savefig(tmpfile.name, format="jpg")
+
+        fit_a_and_t0_func = (
+            self.get_a_t0_and_limb_dark_coeff_fit_function_with_airmass_detrending(
+                params, ts
+            )
+        )
+
+        m_airmass = -1
+        b_airmass = 0
+        p0 = [
+            params.a,
+            params.t0,
+            params.inc,
+            params.ecc,
+            params.w,
+            params.u[0],
+            m_airmass,
+            b_airmass,
+        ]
+        bounds = [
+            [0, params.t0 - params.per / 2, 0, 0, -360, 0, -np.inf, -np.inf],
+            [np.inf, params.t0 + params.per / 2, 90, 1, 360, np.inf, np.inf, np.inf],
+        ]
+
+        print(f"Initial batman TransitParams:")
+        pprint.pprint(params.__dict__)
+        print("\nStarting fit with airmass detrending...")
+
+        popt, pcov = optimize.curve_fit(
+            fit_a_and_t0_func,
+            ts,
+            ys,
+            p0=p0,
+            bounds=bounds,
+            method="trf",
+            verbose=2,
+        )
+        perr = np.sqrt(np.diag(pcov))
+        print(
+            f"\nFitted parameters and errors: [a, t0, inc, ecc, w, linear_limb_darkening_coeff, m_airmass, b_airmass]: \n{popt}\n{perr}"
+        )
+        print(f"Covariance matrix: \n{pcov}")
+
+        params.a = popt[0]
+        params.t0 = popt[1]
+        params.inc = popt[2]
+        params.ecc = popt[3]
+        params.w = popt[4]
+        params.u = [popt[5]]
+        constant_factor = popt[6]
+
+        print(f"\nFinal batman TransitParams:")
+        pprint.pprint(params.__dict__)
+
+        def fitted_model(times):
+            return fit_a_and_t0_func(times, *popt)
+
+        return params, fitted_model
+
+    def get_a_t0_and_limb_dark_coeff_fit_function_with_airmass_detrending(
+        self, params, times
+    ):
+        def fit_a_and_t0_func(
+            ts, a, t0, inc, ecc, w, linear_limb_darkening_coeff, m_airmass, b_airmass
+        ):
+            params.a = a
+            params.t0 = t0
+            params.inc = inc
+            params.ecc = ecc
+            params.w = w
+            params.u = [linear_limb_darkening_coeff]
+            model = batman.TransitModel(params, ts)
+            airmass_function = self.get_airmass_function(times)
+            flux = model.light_curve(params) * (
+                m_airmass * airmass_function(ts) + b_airmass
+            )
+            return flux
+
+        return fit_a_and_t0_func
 
     def get_transit_params_object(self):
 
@@ -219,3 +284,17 @@ class TessTransitFit:
         )
 
         return orbit_radius_in_stellar_radii
+
+    def get_airmass_function(self, times: np.array):
+        astropy_times = Time(times, format="jd")
+        airmass = self.get_airmass(astropy_times)
+        airmass_func = interpolate.interp1d(times, airmass, kind="linear")
+        return airmass_func
+
+    def get_airmass(self, times):
+        frame = AltAz(obstime=times, location=self.earth_location)
+        target_altaz = SkyCoord(
+            self.transit.target.ra, self.transit.target.dec, unit="deg"
+        ).transform_to(frame)
+        airmass = target_altaz.secz
+        return airmass

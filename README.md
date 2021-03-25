@@ -76,6 +76,24 @@ SITES = {
     },
 }
 
+COORDS_BY_INSTRUMENT = {
+    "1M2 SBIG8300": {
+        "latitude": 30.679,
+        "longitude": -104.015,
+        "elevation": 2027,
+    },
+    "1M2 FLI230": {
+        "latitude": -32.38,
+        "longitude": 20.81,
+        "elevation": 1804,
+    },
+    "0M5 SBIG6303E": {
+        "latitude": 51.560583,
+        "longitude": 9.944333,
+        "elevation": 201,
+    },
+}
+
 PROPOSALS = {'priority' : 'exo', 'low_priority': 'exofiller'}
 ```
 

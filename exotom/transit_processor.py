@@ -4,7 +4,7 @@ import batman
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, EarthLocation
 import astropy.units as u
 from astropy.io import fits
 from astropy.table import Table
@@ -18,6 +18,7 @@ from tom_targets.models import Target
 from exotom.models import Transit
 from exotom.photometry import TransitLightCurveExtractor
 from exotom.tess_transit_fit import FitResult
+from local_settings import COORDS_BY_INSTRUMENT
 
 
 class TransitProcessor:
@@ -30,6 +31,7 @@ class TransitProcessor:
         self.first_data_product = self.data_products[0]
         self.observation_record = self.first_data_product.observation_record
         self.target: Target = self.first_data_product.target
+        self.earth_location = self.get_earth_location()
 
         # this try-except is needed because in the beginning "transit_id" was not written to the parameters dict
         try:
@@ -59,6 +61,20 @@ class TransitProcessor:
                 raise ValueError(
                     f"DataGroup contains none 'image_photometry_catalog' DataProducts (due to {dp})."
                 )
+
+    def get_earth_location(self):
+        try:
+            instrument = self.observation_record.parameters["instrument_type"]
+        except KeyError:
+            # if instrument_type not in parameters, use goettingen camera
+            instrument = "0M5 SBIG6303E"
+        lat = COORDS_BY_INSTRUMENT[instrument]["latitude"]
+        lon = COORDS_BY_INSTRUMENT[instrument]["longitude"]
+        height = COORDS_BY_INSTRUMENT[instrument]["elevation"]
+        earth_location = EarthLocation(
+            lat=lat * u.deg, lon=lon * u.deg, height=height * u.m
+        )
+        return earth_location
 
     def process(self):
         """Processes the data products in the data group. Creates three DataProducts
@@ -102,7 +118,7 @@ class TransitProcessor:
 
         image_catalogs: [] = self.load_data_from_dataproduct_list(self.data_products)
         transit_lc_extractor = TransitLightCurveExtractor(
-            image_catalogs, target_coord, self.transit
+            image_catalogs, target_coord, self.transit, self.earth_location
         )
 
         all_light_curves_df = transit_lc_extractor.get_all_light_curves_dataframe(
@@ -187,13 +203,9 @@ class TransitProcessor:
         )
 
         if self.best_fit_result is not None:
-            fitted_model = batman.TransitModel(self.best_fit_result.params, times)
-            model_flux = (
-                fitted_model.light_curve(self.best_fit_result.params)
-                * self.best_fit_result.constant_offset
-            )
+            fitted_model_function = self.best_fit_result.fitted_model
             label = self.get_best_fit_params_legend_string()
-            plt.plot(times, model_flux, color="red", label=label)
+            plt.plot(times, fitted_model_function(times), color="red", label=label)
             plt.legend()
 
         plt.tight_layout()
