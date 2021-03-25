@@ -45,7 +45,10 @@ class TessTransitFit:
             fit_a_and_per_func, ts, ys, p0=p0, bounds=bounds, method="trf", verbose=2
         )
 
-        print(f"\nFitted parameters: [a, per, inc, ecc, w, constant_offset]: \n{popt}")
+        perr = np.sqrt(np.diag(pcov))
+        print(
+            f"\nFitted parameters and errors: [a, per, inc, ecc, w, constant_offset]: \n{popt}\n{perr}"
+        )
         print(f"Covariance matrix: \n{pcov}")
 
         # plt.ion()
