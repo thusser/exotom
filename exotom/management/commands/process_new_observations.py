@@ -86,7 +86,7 @@ def transit_light_curve_dataproduct_exists_for_observation_record(observation_re
         observation_record=observation_record
     )
     for dp in dps_for_obs_record:
-        if dp.data_product_type == "transit_light_curve":
+        if dp.data_product_type == "transit_all_light_curves":
             return True
     return False
 
