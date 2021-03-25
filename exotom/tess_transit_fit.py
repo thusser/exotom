@@ -34,11 +34,19 @@ class TessTransitFit:
         self.light_curve_df = light_curve_df
         self.transit = transit
 
+    def make_simplest_fit_and_report(self):
+
+        with write_stdout_to_stringbfuffer() as string_buffer_stdout:
+            constant_offset, params = self.make_simplest_fit()
+
+        fit_report = string_buffer_stdout.getvalue()
+        print(fit_report)
+
+        return FitResult(params, constant_offset, fit_report)
+
     def make_simplest_fit(self):
         params: batman.TransitParams = self.get_transit_params_object()
-
         fit_a_and_per_func = self.get_a_and_per_fit_function(params)
-
         ts = np.array(self.light_curve_df["time"])
         ys = np.array(
             self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean()
@@ -46,55 +54,44 @@ class TessTransitFit:
         constant_offset = 0
         p0 = [params.a, params.per, params.inc, params.ecc, params.w, constant_offset]
         bounds = [[0, 0, 0, 0, -360, -np.inf], [np.inf, np.inf, 90, 1, 360, np.inf]]
-
-        with write_stdout_to_stringbfuffer() as string_buffer_stdout:
-
-            print(f"Initial batman TransitParams:")
-            pprint.pprint(params.__dict__)
-
-            print("\nStarting fit...")
-            popt, pcov = optimize.curve_fit(
-                fit_a_and_per_func,
-                ts,
-                ys,
-                p0=p0,
-                bounds=bounds,
-                method="trf",
-                verbose=2,
-            )
-
-            perr = np.sqrt(np.diag(pcov))
-            print(
-                f"\nFitted parameters and errors: [a, per, inc, ecc, w, constant_offset]: \n{popt}\n{perr}"
-            )
-            print(f"Covariance matrix: \n{pcov}")
-
-            # plt.ion()
-            # plt.figure()
-            # plt.title(f"Relative Normalized Light")
-            # plt.scatter(
-            #     self.light_curve_df['time'],
-            #     self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean(),
-            #     marker="x",
-            #     linewidth=1,
-            # )
-            # plt.plot(ts, fit_a_and_per_func(ts, *p0), color='orange')
-            # plt.plot(ts, fit_a_and_per_func(ts, *popt), color='red')
-            # plt.pause(100)
-
-            params.a = popt[0]
-            params.per = popt[1]
-            params.inc = popt[2]
-            params.ecc = popt[3]
-            params.w = popt[4]
-            constant_offset = popt[5]
-            print(f"\nFinal batman TransitParams:")
-            pprint.pprint(params.__dict__)
-
-        fit_report = string_buffer_stdout.getvalue()
-        print(fit_report)
-
-        return FitResult(params, constant_offset, fit_report)
+        print(f"Initial batman TransitParams:")
+        pprint.pprint(params.__dict__)
+        print("\nStarting fit...")
+        popt, pcov = optimize.curve_fit(
+            fit_a_and_per_func,
+            ts,
+            ys,
+            p0=p0,
+            bounds=bounds,
+            method="trf",
+            verbose=2,
+        )
+        perr = np.sqrt(np.diag(pcov))
+        print(
+            f"\nFitted parameters and errors: [a, per, inc, ecc, w, constant_offset]: \n{popt}\n{perr}"
+        )
+        print(f"Covariance matrix: \n{pcov}")
+        # plt.ion()
+        # plt.figure()
+        # plt.title(f"Relative Normalized Light")
+        # plt.scatter(
+        #     self.light_curve_df['time'],
+        #     self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean(),
+        #     marker="x",
+        #     linewidth=1,
+        # )
+        # plt.plot(ts, fit_a_and_per_func(ts, *p0), color='orange')
+        # plt.plot(ts, fit_a_and_per_func(ts, *popt), color='red')
+        # plt.pause(100)
+        params.a = popt[0]
+        params.per = popt[1]
+        params.inc = popt[2]
+        params.ecc = popt[3]
+        params.w = popt[4]
+        constant_offset = popt[5]
+        print(f"\nFinal batman TransitParams:")
+        pprint.pprint(params.__dict__)
+        return constant_offset, params
 
     def get_a_and_per_fit_function(self, params):
         def fit_a_and_per_func(ts, a, per, inc, ecc, w, c):
