@@ -1,6 +1,7 @@
 import pprint
 import sys
 from collections import namedtuple
+from contextlib import contextmanager
 from io import StringIO
 
 import batman
@@ -11,6 +12,19 @@ from astropy.time import Time
 from scipy import optimize
 
 from exotom.models import Transit
+
+
+@contextmanager
+def write_stdout_to_stringbfuffer() -> StringIO:
+    string_buffer_stdout = StringIO()
+    old_stdout = sys.stdout
+
+    try:
+        sys.stdout = string_buffer_stdout
+        yield string_buffer_stdout
+    finally:
+        sys.stdout = old_stdout
+
 
 FitResult = namedtuple("FitResult", ["params", "constant_offset", "fit_report"])
 
@@ -33,47 +47,50 @@ class TessTransitFit:
         p0 = [params.a, params.per, params.inc, params.ecc, params.w, constant_offset]
         bounds = [[0, 0, 0, 0, -360, -np.inf], [np.inf, np.inf, 90, 1, 360, np.inf]]
 
-        old_std = sys.stdout
-        string_buffer_stdout = StringIO()
-        sys.stdout = string_buffer_stdout
+        with write_stdout_to_stringbfuffer() as string_buffer_stdout:
 
-        print(f"Initial batman TransitParams:")
-        pprint.pprint(params.__dict__)
+            print(f"Initial batman TransitParams:")
+            pprint.pprint(params.__dict__)
 
-        print("\nStarting fit...")
-        popt, pcov = optimize.curve_fit(
-            fit_a_and_per_func, ts, ys, p0=p0, bounds=bounds, method="trf", verbose=2
-        )
+            print("\nStarting fit...")
+            popt, pcov = optimize.curve_fit(
+                fit_a_and_per_func,
+                ts,
+                ys,
+                p0=p0,
+                bounds=bounds,
+                method="trf",
+                verbose=2,
+            )
 
-        perr = np.sqrt(np.diag(pcov))
-        print(
-            f"\nFitted parameters and errors: [a, per, inc, ecc, w, constant_offset]: \n{popt}\n{perr}"
-        )
-        print(f"Covariance matrix: \n{pcov}")
+            perr = np.sqrt(np.diag(pcov))
+            print(
+                f"\nFitted parameters and errors: [a, per, inc, ecc, w, constant_offset]: \n{popt}\n{perr}"
+            )
+            print(f"Covariance matrix: \n{pcov}")
 
-        # plt.ion()
-        # plt.figure()
-        # plt.title(f"Relative Normalized Light")
-        # plt.scatter(
-        #     self.light_curve_df['time'],
-        #     self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean(),
-        #     marker="x",
-        #     linewidth=1,
-        # )
-        # plt.plot(ts, fit_a_and_per_func(ts, *p0), color='orange')
-        # plt.plot(ts, fit_a_and_per_func(ts, *popt), color='red')
-        # plt.pause(100)
+            # plt.ion()
+            # plt.figure()
+            # plt.title(f"Relative Normalized Light")
+            # plt.scatter(
+            #     self.light_curve_df['time'],
+            #     self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean(),
+            #     marker="x",
+            #     linewidth=1,
+            # )
+            # plt.plot(ts, fit_a_and_per_func(ts, *p0), color='orange')
+            # plt.plot(ts, fit_a_and_per_func(ts, *popt), color='red')
+            # plt.pause(100)
 
-        params.a = popt[0]
-        params.per = popt[1]
-        params.inc = popt[2]
-        params.ecc = popt[3]
-        params.w = popt[4]
-        constant_offset = popt[5]
-        print(f"\nFinal batman TransitParams:")
-        pprint.pprint(params.__dict__)
+            params.a = popt[0]
+            params.per = popt[1]
+            params.inc = popt[2]
+            params.ecc = popt[3]
+            params.w = popt[4]
+            constant_offset = popt[5]
+            print(f"\nFinal batman TransitParams:")
+            pprint.pprint(params.__dict__)
 
-        sys.stdout = old_std
         fit_report = string_buffer_stdout.getvalue()
         print(fit_report)
 
