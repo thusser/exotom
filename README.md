@@ -94,6 +94,14 @@ COORDS_BY_INSTRUMENT = {
     },
 }
 
+# gives 1-dimensional exposure time model exp_time = f(mag)
+# see ./notebooks/exposure_times notebook
+EXPOSURE_TIME_MODEL_BY_INSTRUMENT = {
+    "1M2 SBIG8300": lambda mag: 7.92e-05 * np.exp(9.24e-01 * mag),
+    "1M2 FLI230": lambda mag: 6.56e-05 * np.exp(9.22e-01 * mag),
+    "0M5 SBIG6303E": lambda mag: 8e-3 * np.exp(6.10e-01 * mag),
+}
+
 PROPOSALS = {'priority' : 'exo', 'low_priority': 'exofiller'}
 ```
 

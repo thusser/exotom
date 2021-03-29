@@ -97,7 +97,7 @@ def get_observation_data(
     transit: Transit, instrument_type: str, instrument_details: dict, contact: str
 ) -> dict:
     magnitude = transit.target.targetextra_set.get(key="Mag (TESS)").float_value
-    exposure_time = calculate_exposure_time(magnitude)
+    exposure_time = calculate_exposure_time(magnitude, instrument_type)
 
     data = {
         "name": f"{transit.target.name} #{transit.number} {contact}",

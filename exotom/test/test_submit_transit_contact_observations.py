@@ -68,7 +68,7 @@ class TestCommand(TestCase):
                                         "instrument_configs": [
                                             {
                                                 "exposure_count": 1,
-                                                "exposure_time": 9.629461090307885,
+                                                "exposure_time": 3.6723439653643895,
                                                 "mode": "sbig8300_1x1",
                                                 "optical_elements": {
                                                     "filter": "no_filter"
@@ -117,7 +117,7 @@ class TestCommand(TestCase):
                                         "instrument_configs": [
                                             {
                                                 "exposure_count": 1,
-                                                "exposure_time": 9.629461090307885,
+                                                "exposure_time": 3.6723439653643895,
                                                 "mode": "sbig8300_1x1",
                                                 "optical_elements": {
                                                     "filter": "no_filter"
