@@ -32,47 +32,49 @@ pip install -r requirements.txt
 For local development create `local_settings.py` at top-level of project with following content (fill in your observation portal api key)
 ```
 import os
+import numpy as np
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
     }
 }
 FACILITIES = {
-    'IAG': {
-        'portal_url': 'https://observe.monet.uni-goettingen.de',
-        'archive_url': 'https://archive.monet.uni-goettingen.de',
-        'api_key': '',
+    "IAG": {
+        "portal_url": "https://observe.monet.uni-goettingen.de",
+        "archive_url": "https://archive.monet.uni-goettingen.de",
+        "api_key": "<FILL IN YOUR API KEY>",
     },
-    'IAG50Transit': {
-        'telescope_class': '0m5',
-        'instrument_type': '0M5 SBIG6303E',
-        'proposal': 'exo',
+    "IAG50Transit": {
+        "telescope_class": "0m5",
+        "instrument_type": "0M5 SBIG6303E",
+        "proposal": "exo",
     },
 }
 
 SITES = {
-    'McDonald': {
-        'transitObservationConstraints': {
-            'maxMagnitude': 20,
-            'minTransitDepthInMmag': 1,
+    "McDonald": {
+        "transitObservationConstraints": {
+            "maxMagnitude": 16,
+            "minTransitDepthInMmag": 1,
         },
-        'instrument': '1M2 SBIG8300'
+        "instrument": "1M2 SBIG8300",
     },
-    'Sutherland': {
-        'transitObservationConstraints': {
-            'maxMagnitude': 20,
-            'minTransitDepthInMmag': 1,
+    "Sutherland": {
+        "transitObservationConstraints": {
+            "maxMagnitude": 16,
+            "minTransitDepthInMmag": 1,
         },
-        'instrument': '1M2 FLI230'
+        "instrument": "1M2 FLI230",
     },
-    'Göttingen': {
-        'transitObservationConstraints': {
-            'maxMagnitude': 14,
-            'minTransitDepthInMmag': 1,
+    "Göttingen": {
+        "transitObservationConstraints": {
+            "maxMagnitude": 14,
+            "minTransitDepthInMmag": 1,
         },
-        'instrument': '0M5 SBIG6303E'
+        "instrument": "0M5 SBIG6303E",
     },
 }
 
@@ -102,7 +104,8 @@ EXPOSURE_TIME_MODEL_BY_INSTRUMENT = {
     "0M5 SBIG6303E": lambda mag: 8e-3 * np.exp(6.10e-01 * mag),
 }
 
-PROPOSALS = {'priority' : 'exo', 'low_priority': 'exofiller'}
+PROPOSALS = {"priority": "exo", "low_priority": "exofiller"}
+
 ```
 
 ### make django migrations
