@@ -77,6 +77,7 @@ class Test(TestCase):
         (
             params1,
             _,
+            baseline_model1,
             fit_report1,
         ) = tess_transit_fit1.make_simplest_fit_and_report_with_airmass_detrending()
 
@@ -86,6 +87,8 @@ class Test(TestCase):
         self.assertAlmostEqual(params1.ecc, 0.058767982705156555, places=2)
         self.assertAlmostEqual(params1.w, 36.991004415580655, places=2)
         self.assertAlmostEqual(params1.u[0], 0.8510291929224456, places=2)
+
+        self.assertEqual(baseline_model1, None)
 
         fit_report1_expected = """Initial batman TransitParams:
 {'a': 16.301326571397812,
@@ -173,6 +176,7 @@ Final batman TransitParams:
         (
             params2,
             _,
+            baseline_model2,
             fit_report2,
         ) = tess_transit_fit2.make_simplest_fit_and_report_with_airmass_detrending()
 
@@ -182,6 +186,8 @@ Final batman TransitParams:
         self.assertAlmostEqual(params2.ecc, 0.0017003124779760928, places=2)
         self.assertAlmostEqual(params2.w, 89.99748700120057, places=2)
         self.assertAlmostEqual(params2.u[0], 0.3999757946325413, places=2)
+
+        self.assertEqual(baseline_model2, None)
 
         fit_report2_expected = """Initial batman TransitParams:
 {'a': 17.408156570943518,
@@ -262,6 +268,7 @@ Final batman TransitParams:
         (
             params1,
             _,
+            baseline_model1,
             fit_report1,
         ) = tess_transit_fit1.make_simplest_fit_and_report_with_airmass_detrending()
 
@@ -271,6 +278,9 @@ Final batman TransitParams:
         self.assertAlmostEqual(params1.ecc, 0.026772599984058565, places=2)
         self.assertAlmostEqual(params1.w, -82.82728722722156, places=2)
         self.assertAlmostEqual(params1.u[0], 0.8031633523451358, places=2)
+
+        self.assertTrue(callable(baseline_model1))
+
         fit_report1_expected = """Initial batman TransitParams:
 {'a': 16.301326571397812,
  'ecc': 0,
@@ -344,6 +354,7 @@ Final batman TransitParams:
         (
             params2,
             _,
+            baseline_model2,
             fit_report2,
         ) = tess_transit_fit2.make_simplest_fit_and_report_with_airmass_detrending()
 
@@ -353,6 +364,9 @@ Final batman TransitParams:
         self.assertAlmostEqual(params2.ecc, 0.0003359123544722694, places=2)
         self.assertAlmostEqual(params2.w, 90.13110238025799, places=2)
         self.assertAlmostEqual(params2.u[0], 0.39998852439193955, places=2)
+
+        self.assertTrue(callable(baseline_model2))
+
         fit_report2_expected = """Initial batman TransitParams:
 {'a': 17.408156570943518,
  'ecc': 0,
