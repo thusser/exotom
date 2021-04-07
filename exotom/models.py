@@ -24,29 +24,29 @@ class Transit(models.Model):
             + (self.number * self.target.extra_fields["Period (days) err"]) ** 2
         ) ** 0.5
 
-    def start_earliest(self):
+    def start_earliest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.start - err
+        return self.start - err * n_sigma
 
-    def start_latest(self):
+    def start_latest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.start + err
+        return self.start + err * n_sigma
 
-    def mid_earliest(self):
+    def mid_earliest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.mid - err
+        return self.mid - err * n_sigma
 
-    def mid_latest(self):
+    def mid_latest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.mid + err
+        return self.mid + err * n_sigma
 
-    def end_earliest(self):
+    def end_earliest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.end - err
+        return self.end - err * n_sigma
 
-    def end_latest(self):
+    def end_latest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.end + err
+        return self.end + err * n_sigma
 
     @property
     def facilities(self):
