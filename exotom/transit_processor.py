@@ -103,7 +103,7 @@ class TransitProcessor:
             all_light_curves_df,
             best_light_curve_df,
             best_fit_result,
-        ) = self.get_all_and_best_lightcurves()
+        ) = self.get_all_and_best_lightcurves_and_fit()
 
         self.best_fit_result = best_fit_result
         self.all_light_curves_df = all_light_curves_df
@@ -113,7 +113,7 @@ class TransitProcessor:
             all_light_curves_df, best_light_curve_df, best_fit_result
         )
 
-    def get_all_and_best_lightcurves(self):
+    def get_all_and_best_lightcurves_and_fit(self):
         target_coord = SkyCoord(self.target.ra * u.deg, self.target.dec * u.deg)
 
         image_catalogs: [] = self.load_data_from_dataproduct_list(self.data_products)
@@ -190,26 +190,7 @@ class TransitProcessor:
 
         times = np.array(self.best_light_curves_df["time"])
 
-        plt.figure(figsize=(12, 9))
-
-        plt.title(f"Relative normalized {self.best_light_curves_dp.product_id} and fit")
-        plt.scatter(
-            times,
-            self.best_light_curves_df["target_rel"]
-            / self.best_light_curves_df["target_rel"].mean(),
-            marker="x",
-            linewidth=1,
-            color="blue",
-        )
-
-        if self.best_fit_result is not None:
-            fitted_model_function = self.best_fit_result.fitted_model
-            label = self.get_best_fit_params_legend_string()
-            plt.plot(times, fitted_model_function(times), color="red", label=label)
-            plt.legend()
-
-        plt.tight_layout()
-        plt.savefig(tmpfile.name, format="jpg", dpi=200)
+        self.save_plot_of_transit_data_and_fit(times, tmpfile.name)
 
         if tmpfile:
             dp, _ = DataProduct.objects.get_or_create(
@@ -224,6 +205,56 @@ class TransitProcessor:
                 dp.data.save(filename, File(f), save=True)
                 dp.save()
             tmpfile.close()
+
+    def save_plot_of_transit_data_and_fit(self, times, file_name):
+        plt.figure(figsize=(12, 9))
+        baseline_function = None
+        if self.best_fit_result is not None:
+            fit_function = self.best_fit_result.fitted_model
+            baseline_function = self.best_fit_result.baseline_model
+            label = self.get_best_fit_params_legend_string()
+
+            # plot airmass detrended data if baseline_function is given
+            if baseline_function is not None:
+                plt.plot(
+                    times,
+                    fit_function(times) / baseline_function(times),
+                    color="red",
+                    label=label,
+                )
+            else:
+                plt.plot(times, fit_function(times), color="red", label=label)
+
+            plt.legend()
+        plt.title(
+            f"Relative normalized {self.best_light_curves_dp.product_id} and fit"
+            + "(airmass detrended)"
+            if baseline_function is not None
+            else ""
+        )
+        if baseline_function is not None:
+            plt.scatter(
+                times,
+                (
+                    self.best_light_curves_df["target_rel"]
+                    / self.best_light_curves_df["target_rel"].mean()
+                )
+                / baseline_function(times),
+                marker="x",
+                linewidth=1,
+                color="blue",
+            )
+        else:
+            plt.scatter(
+                times,
+                self.best_light_curves_df["target_rel"]
+                / self.best_light_curves_df["target_rel"].mean(),
+                marker="x",
+                linewidth=1,
+                color="blue",
+            )
+        plt.tight_layout()
+        plt.savefig(file_name, format="jpg", dpi=200)
 
     def get_best_fit_params_legend_string(self):
         key_val_list = [

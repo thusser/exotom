@@ -29,7 +29,9 @@ def write_stdout_to_stringbfuffer() -> StringIO:
         sys.stdout = old_stdout
 
 
-FitResult = namedtuple("FitResult", ["params", "fitted_model", "fit_report"])
+FitResult = namedtuple(
+    "FitResult", ["params", "fitted_model", "baseline_model", "fit_report"]
+)
 
 
 class TessTransitFit:
@@ -48,15 +50,23 @@ class TessTransitFit:
         with write_stdout_to_stringbfuffer() as string_buffer_stdout:
             if self.earth_location is not None:
                 # with airmass detrending
-                params, fitted_model = self.make_simplest_fit_with_airmass_detrending()
+                (
+                    params,
+                    fitted_model,
+                    baseline_model,
+                ) = self.make_simplest_fit_with_airmass_detrending()
             else:
                 # no airmass detrending
-                params, fitted_model = self.make_simplest_fit_no_airmass_detrending()
+                (
+                    params,
+                    fitted_model,
+                    baseline_model,
+                ) = self.make_simplest_fit_no_airmass_detrending()
 
         fit_report = string_buffer_stdout.getvalue()
         print(fit_report)
 
-        return FitResult(params, fitted_model, fit_report)
+        return FitResult(params, fitted_model, baseline_model, fit_report)
 
     def make_simplest_fit_no_airmass_detrending(self):
         params: batman.TransitParams = self.get_transit_params_object()
@@ -119,7 +129,9 @@ class TessTransitFit:
         def fitted_model(times):
             return fit_a_and_t0_func(times, *popt)
 
-        return params, fitted_model
+        baseline_model = None
+
+        return params, fitted_model, baseline_model
 
     def get_a_t0_and_limb_dark_coeff_fit_function_no_airmass_detrending(self, params):
         def fit_a_and_t0_func(
@@ -193,7 +205,8 @@ class TessTransitFit:
         params.ecc = popt[3]
         params.w = popt[4]
         params.u = [popt[5]]
-        constant_factor = popt[6]
+        m_airmass = popt[6]
+        b_airmass = popt[7]
 
         print(f"\nFinal batman TransitParams:")
         pprint.pprint(params.__dict__)
@@ -201,7 +214,11 @@ class TessTransitFit:
         def fitted_model(times):
             return fit_a_and_t0_func(times, *popt)
 
-        return params, fitted_model
+        def baseline_model(times):
+            airmass_function = self.get_airmass_function(ts)
+            return m_airmass * airmass_function(times) + b_airmass
+
+        return params, fitted_model, baseline_model
 
     def get_a_t0_and_limb_dark_coeff_fit_function_with_airmass_detrending(
         self, params, times
