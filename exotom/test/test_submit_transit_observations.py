@@ -65,7 +65,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10026.676212000004,
+                                        "repeat_duration": 10942.170024000003,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -93,8 +93,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T09:41:14.584",
-                                        "end": "2021-01-19T12:40:21.260",
+                                        "start": "2021-01-19T09:33:36.837",
+                                        "end": "2021-01-19T12:47:59.007",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -117,7 +117,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10037.550435999996,
+                                        "repeat_duration": 10963.918472,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -145,8 +145,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-23T09:15:01.294",
-                                        "end": "2021-01-23T12:14:18.844",
+                                        "start": "2021-01-23T09:07:18.110",
+                                        "end": "2021-01-23T12:22:02.028",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -296,7 +296,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10026.676212000004,
+                                    "repeat_duration": 10942.170024000003,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -322,8 +322,8 @@ class TestCommand(TestCase):
                             ],
                             "windows": [
                                 {
-                                    "start": "2021-01-19T09:41:14.584",
-                                    "end": "2021-01-19T12:40:21.260",
+                                    "start": "2021-01-19T09:33:36.837",
+                                    "end": "2021-01-19T12:47:59.007",
                                 }
                             ],
                             "location": {"telescope_class": "1m2"},
@@ -386,7 +386,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10026.676212000004,
+                                    "repeat_duration": 10942.170024000003,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -412,8 +412,8 @@ class TestCommand(TestCase):
                             ],
                             "windows": [
                                 {
-                                    "start": "2021-01-19T09:41:14.584",
-                                    "end": "2021-01-19T12:40:21.260",
+                                    "start": "2021-01-19T09:33:36.837",
+                                    "end": "2021-01-19T12:47:59.007",
                                 }
                             ],
                             "location": {"telescope_class": "1m2"},
