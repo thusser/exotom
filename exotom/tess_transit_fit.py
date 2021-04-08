@@ -7,12 +7,11 @@ from io import StringIO
 import batman
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 from astropy.time import Time
-import astropy.units as u
 from scipy import optimize
 from scipy.interpolate import interpolate
+from tom_targets.models import TargetExtra
 
 from exotom.models import Transit
 
@@ -39,10 +38,12 @@ class TessTransitFit:
         self,
         light_curve_df: pd.DataFrame,
         transit: Transit,
+        target_extras: [TargetExtra],
         earth_location: EarthLocation = None,
     ):
         self.light_curve_df = light_curve_df
         self.transit = transit
+        self.target_extras: [TargetExtra] = target_extras
         self.earth_location = earth_location
 
     def make_simplest_fit_and_report_with_airmass_detrending(self):
@@ -242,23 +243,20 @@ class TessTransitFit:
         return fit_a_and_t0_func
 
     def get_transit_params_object(self):
-
-        target_extras = self.transit.target.targetextra_set
-
         params: batman.TransitParams = batman.TransitParams()
         params.t0 = Time(self.transit.mid).jd
-        params.per = target_extras.get(key="Period (days)").float_value
+        params.per = self.get_target_extra(key="Period (days)").float_value
         # convert to solar radii
         planet_radius_in_solar_radii = (
-            target_extras.get(key="Planet Radius (R_Earth)").float_value / 109.2
+            self.get_target_extra(key="Planet Radius (R_Earth)").float_value / 109.2
         )
         planet_radius_in_stellar_radii = (
             planet_radius_in_solar_radii
-            / target_extras.get(key="Stellar Radius (R_Sun)").float_value
+            / self.get_target_extra(key="Stellar Radius (R_Sun)").float_value
         )
         params.rp = planet_radius_in_stellar_radii
 
-        orbit_radius_in_stellar_radii = self.estimate_orbit_radius(target_extras)
+        orbit_radius_in_stellar_radii = self.estimate_orbit_radius()
         params.a = orbit_radius_in_stellar_radii
 
         params.inc = 90
@@ -269,7 +267,7 @@ class TessTransitFit:
 
         return params
 
-    def estimate_orbit_radius(self, target_extras):
+    def estimate_orbit_radius(self):
         # constants
         grav_constant = 6.7e-11
         abs_mag_sun = 4.83
@@ -277,10 +275,12 @@ class TessTransitFit:
         radius_sun_in_m = 7e8
 
         # system parameters
-        apparent_magnitude = target_extras.get(key="Mag (TESS)").float_value
-        distance = target_extras.get(key="Stellar Distance (pc)").float_value
-        period_in_s = target_extras.get(key="Period (days)").float_value * 24 * 60 * 60
-        radius_star_in_sun_radii = target_extras.get(
+        apparent_magnitude = self.get_target_extra(key="Mag (TESS)").float_value
+        distance = self.get_target_extra(key="Stellar Distance (pc)").float_value
+        period_in_s = (
+            self.get_target_extra(key="Period (days)").float_value * 24 * 60 * 60
+        )
+        radius_star_in_sun_radii = self.get_target_extra(
             key="Stellar Radius (R_Sun)"
         ).float_value
 
@@ -315,3 +315,8 @@ class TessTransitFit:
         ).transform_to(frame)
         airmass = target_altaz.secz
         return airmass
+
+    def get_target_extra(self, key):
+        for target_extra in self.target_extras:
+            if target_extra.key == key:
+                return target_extra

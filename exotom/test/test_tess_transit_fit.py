@@ -73,7 +73,10 @@ class Test(TestCase):
         light_curve_df1 = pd.read_csv(self.data_file1)
         light_curve_df2 = pd.read_csv(self.data_file2)
 
-        tess_transit_fit1 = TessTransitFit(light_curve_df1, self.transit1)
+        target_extras = list(self.transit1.target.targetextra_set.all())
+        tess_transit_fit1 = TessTransitFit(
+            light_curve_df1, self.transit1, target_extras
+        )
         (
             params1,
             _,
@@ -172,7 +175,10 @@ Final batman TransitParams:
 """
         self.assertEqual(fit_report1, fit_report1_expected, "Fit report 1 ist wrong")
 
-        tess_transit_fit2 = TessTransitFit(light_curve_df2, self.transit2)
+        target_extras = list(self.transit2.target.targetextra_set.all())
+        tess_transit_fit2 = TessTransitFit(
+            light_curve_df2, self.transit2, target_extras
+        )
         (
             params2,
             _,
@@ -264,7 +270,10 @@ Final batman TransitParams:
         light_curve_df1 = pd.read_csv(self.data_file1)
         light_curve_df2 = pd.read_csv(self.data_file2)
 
-        tess_transit_fit1 = TessTransitFit(light_curve_df1, self.transit1, goe)
+        target_extras = list(self.transit1.target.targetextra_set.all())
+        tess_transit_fit1 = TessTransitFit(
+            light_curve_df1, self.transit1, target_extras, goe
+        )
         (
             params1,
             _,
@@ -350,7 +359,10 @@ Final batman TransitParams:
 """
         self.assertEqual(fit_report1, fit_report1_expected, "Fit report 1 ist wrong")
 
-        tess_transit_fit2 = TessTransitFit(light_curve_df2, self.transit2, goe)
+        target_extras = list(self.transit2.target.targetextra_set.all())
+        tess_transit_fit2 = TessTransitFit(
+            light_curve_df2, self.transit2, target_extras, goe
+        )
         (
             params2,
             _,

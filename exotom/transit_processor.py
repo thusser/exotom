@@ -16,7 +16,7 @@ from tom_dataproducts.models import DataProductGroup, DataProduct
 from tom_targets.models import Target
 
 from exotom.models import Transit
-from exotom.photometry import TransitLightCurveExtractor
+from exotom.photometry import TransitLightCurveExtractor, LightCurvesExtractor
 from exotom.tess_transit_fit import FitResult
 from local_settings import COORDS_BY_INSTRUMENT
 
@@ -31,6 +31,7 @@ class TransitProcessor:
         self.first_data_product = self.data_products[0]
         self.observation_record = self.first_data_product.observation_record
         self.target: Target = self.first_data_product.target
+        self.target_coord = SkyCoord(self.target.ra * u.deg, self.target.dec * u.deg)
         self.earth_location = self.get_earth_location()
 
         # this try-except is needed because in the beginning "transit_id" was not written to the parameters dict
@@ -98,12 +99,15 @@ class TransitProcessor:
         self.create_best_light_curve_and_fit_image()
 
     def extract_and_save_lightcurves(self):
+
+        all_light_curves_df = self.extract_all_lightcurves_df()
+
         best_fit_result: FitResult
         (
             all_light_curves_df,
             best_light_curve_df,
             best_fit_result,
-        ) = self.get_all_and_best_lightcurves_and_fit()
+        ) = self.extract_best_lightcurves_and_fit(all_light_curves_df)
 
         self.best_fit_result = best_fit_result
         self.all_light_curves_df = all_light_curves_df
@@ -113,16 +117,25 @@ class TransitProcessor:
             all_light_curves_df, best_light_curve_df, best_fit_result
         )
 
-    def get_all_and_best_lightcurves_and_fit(self):
-        target_coord = SkyCoord(self.target.ra * u.deg, self.target.dec * u.deg)
-
+    def extract_all_lightcurves_df(self):
         image_catalogs: [] = self.load_data_from_dataproduct_list(self.data_products)
-        transit_lc_extractor = TransitLightCurveExtractor(
-            image_catalogs, target_coord, self.transit, self.earth_location
-        )
 
-        all_light_curves_df = transit_lc_extractor.get_all_light_curves_dataframe(
-            flux_column_name="flux"
+        lce = LightCurvesExtractor(image_catalogs, self.target_coord)
+
+        all_light_curves_df = lce.get_target_and_ref_stars_light_curves_df()
+        return all_light_curves_df
+
+    def extract_best_lightcurves_and_fit(self, all_light_curves_df):
+
+        target_extras_list = (
+            list(self.transit.target.targetextra_set.all()) if self.transit else None
+        )
+        transit_lc_extractor = TransitLightCurveExtractor(
+            all_light_curves_df,
+            self.target_coord,
+            target_extras_list,
+            self.transit,
+            self.earth_location,
         )
         (
             best_light_curve_df,

@@ -1,13 +1,14 @@
 import numpy as np
-from astropy.coordinates import SkyCoord, AltAz, EarthLocation
+from astropy.coordinates import SkyCoord, EarthLocation
 import astropy.units as u
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import copy, pprint
+import copy
 from typing import Union
 
 from batman import TransitParams
+from tom_targets.models import TargetExtra
 
 from exotom.models import Transit
 from exotom.tess_transit_fit import TessTransitFit, FitResult
@@ -18,41 +19,18 @@ MAX_SEPARATION_TO_CATALOG_IN_DEG = 5 / 3600
 class TransitLightCurveExtractor:
     def __init__(
         self,
-        image_catalogs: [],
+        all_light_curves_df: pd.DataFrame,
         target_coord: SkyCoord,
+        target_extras: [TargetExtra],
         transit: Transit,
         earth_location: EarthLocation,
-        one_image_for_plot: np.ndarray = None,
-        max_allowed_pixel_value: float = 5e4,
-        max_allowed_source_ellipticity: float = 0.4,
-        min_allowed_source_fwhm: float = 2.5,
     ):
 
+        self.all_light_curves_df = all_light_curves_df
         self.target_coord = target_coord
+        self.target_extras: [TargetExtra] = target_extras
         self.transit = transit  # can be None if 'transit_id' had not been written to ObservationRecord.parameters
         self.earth_location = earth_location
-        self.lce = LightCurvesExtractor(
-            image_catalogs,
-            target_coord,
-            one_image_for_plot,
-            max_allowed_pixel_value,
-            max_allowed_source_ellipticity,
-            min_allowed_source_fwhm,
-        )
-        self.light_curves_df: Union[pd.DataFrame, None] = None
-        # self.filtered_light_curves_with_target_rel_light_curve_df: Union[pd.DataFrame, None] = None
-
-    def get_all_light_curves_dataframe(
-        self,
-        flux_column_name: str = "flux",
-        use_only_n_brightest_ref_sources: int = None,
-        force_recalculate: bool = False,
-    ):
-        if self.light_curves_df is None or force_recalculate:
-            self.light_curves_df = self.lce.get_target_and_ref_stars_light_curves_df(
-                flux_column_name, use_only_n_brightest_ref_sources
-            )
-        return self.light_curves_df
 
     def get_best_relative_transit_light_curve_dataframe(
         self,
@@ -61,7 +39,7 @@ class TransitLightCurveExtractor:
         :returns pd.DataFrame that contains the lightcurves of good reference stars and target
         and relative light curve of target
         """
-        light_curves_df = copy.deepcopy(self.get_all_light_curves_dataframe())
+        light_curves_df = copy.deepcopy(self.all_light_curves_df)
 
         filtered_light_curves = self.filter_noisy_light_curves(light_curves_df)
 
@@ -89,7 +67,7 @@ class TransitLightCurveExtractor:
 
     def make_best_fit(self, best_light_curves_df):
         transit_fit = TessTransitFit(
-            best_light_curves_df, self.transit, self.earth_location
+            best_light_curves_df, self.transit, self.target_extras, self.earth_location
         )
         fit_result = transit_fit.make_simplest_fit_and_report_with_airmass_detrending()
         return fit_result
