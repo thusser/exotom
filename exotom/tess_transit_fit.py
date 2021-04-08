@@ -76,10 +76,7 @@ class TessTransitFit:
             self.get_a_t0_and_limb_dark_coeff_fit_function_no_airmass_detrending(params)
         )
 
-        ts = np.array(self.light_curve_df["time"])
-        ys = np.array(
-            self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean()
-        )
+        ts, ys = self.get_fit_data()
 
         constant_factor = 1
         p0 = [
@@ -153,10 +150,7 @@ class TessTransitFit:
     def make_simplest_fit_with_airmass_detrending(self):
         params: batman.TransitParams = self.get_transit_params_object()
 
-        ts = np.array(self.light_curve_df["time"])
-        ys = np.array(
-            self.light_curve_df["target_rel"] / self.light_curve_df["target_rel"].mean()
-        )
+        ts, ys = self.get_fit_data()
 
         fit_a_and_t0_func = (
             self.get_a_t0_and_limb_dark_coeff_fit_function_with_airmass_detrending(
@@ -220,6 +214,35 @@ class TessTransitFit:
             return m_airmass * airmass_function(times) + b_airmass
 
         return params, fitted_model, baseline_model
+
+    def get_fit_data(self):
+        ts = np.array(self.light_curve_df["time"])
+        ys = self.get_target_relative_lightcurve()
+        return ts, ys
+
+    def get_target_relative_lightcurve(self):
+        if "target_rel" in self.light_curve_df.columns:
+            return np.array(
+                self.light_curve_df["target_rel"]
+                / self.light_curve_df["target_rel"].mean()
+            )
+
+        ref_star_columns = self.get_ref_star_columns(self.light_curve_df.columns)
+        target_rel = self.light_curve_df["target"] / self.light_curve_df[
+            ref_star_columns
+        ].sum(axis="columns")
+        target_rel_normed = target_rel / target_rel.mean()
+
+        return np.array(target_rel_normed)
+
+    def get_ref_star_columns(self, columns):
+        ref_star_columns = list(
+            filter(
+                lambda col: str(col).isdigit() or type(col) == int,
+                columns,
+            )
+        )
+        return ref_star_columns
 
     def get_a_t0_and_limb_dark_coeff_fit_function_with_airmass_detrending(
         self, params, times
