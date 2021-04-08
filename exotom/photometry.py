@@ -47,7 +47,7 @@ class TransitLightCurveExtractor:
         filtered_light_curves_with_target_rel_light_curve_df[
             "target_rel"
         ] = filtered_light_curves["target"] / filtered_light_curves[
-            filter(lambda col: type(col) == int, filtered_light_curves.columns)
+            self.get_ref_star_columns(filtered_light_curves.columns)
         ].sum(
             axis="columns"
         )
@@ -65,6 +65,9 @@ class TransitLightCurveExtractor:
         )
         return filtered_light_curves_with_target_rel_light_curve_df, fit_result
 
+    def get_ref_star_columns(self, columns):
+        return list(filter(lambda col: str(col).isdigit() or type(col) == int, columns))
+
     def make_best_fit(self, best_light_curves_df):
         transit_fit = TessTransitFit(
             best_light_curves_df, self.transit, self.target_extras, self.earth_location
@@ -81,30 +84,37 @@ class TransitLightCurveExtractor:
         :return: filtered light curves
         """
 
-        ref_star_columns = [col for col in light_curves_df.columns if type(col) == int]
-        target_lc_normed = light_curves_df["target"] / light_curves_df["target"].mean()
-        relative_light_curves_stds = {}
-        for col in ref_star_columns:
-            cmp_lc = light_curves_df[col]
-            cmp_lc_normed = cmp_lc / cmp_lc.mean()
+        ref_star_columns = self.get_ref_star_columns(light_curves_df.columns)
+        # use sum of all reference lightcurves to remove trend and create relative reference star light curve
+        sum_of_reference_lightcurve = light_curves_df[ref_star_columns].sum(
+            axis="columns"
+        )
+        relative_light_curves_stddevs = {}
+        for column in ref_star_columns:
+            comparison_lightcurve = light_curves_df[column]
+            normed_comp_lightcurve = (
+                comparison_lightcurve / comparison_lightcurve.mean()
+            )
 
-            cmp_rel_lc = target_lc_normed / cmp_lc_normed
+            relative_comp_lightcurve = (
+                sum_of_reference_lightcurve / normed_comp_lightcurve
+            )
 
-            rel_lc_std = cmp_rel_lc.std()
+            relative_lightcurve_stddev = relative_comp_lightcurve.std()
 
-            relative_light_curves_stds[col] = rel_lc_std
+            relative_light_curves_stddevs[column] = relative_lightcurve_stddev
 
-        # kappa sigma clip on the standard deviation of relative lightcurves
-        avg = np.mean(list(relative_light_curves_stds.values()))
-        std = np.std(list(relative_light_curves_stds.values()))
+        # kappa sigma clip on the standard deviations of relative lightcurves
+        avg = np.mean(list(relative_light_curves_stddevs.values()))
+        std = np.std(list(relative_light_curves_stddevs.values()))
 
         remove_columns = [
             col
-            for col, col_std in relative_light_curves_stds.items()
+            for col, col_std in relative_light_curves_stddevs.items()
             if col_std > avg + kappa * std
         ]
         print(
-            f"Removing ref stars {remove_columns} because relative_light_curves_stds > avg + {kappa} * sigma."
+            f"Removing ref stars {remove_columns} because relative_light_curves_stddevs > avg + {kappa} * sigma."
         )
         light_curves_df.drop(columns=remove_columns, inplace=True)
         return light_curves_df
