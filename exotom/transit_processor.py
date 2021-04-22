@@ -13,7 +13,7 @@ from astropy.time import Time
 from django.core.files import File
 from django.core.files.base import ContentFile
 from tom_dataproducts.models import DataProductGroup, DataProduct
-from tom_targets.models import Target
+from tom_targets.models import Target, TargetExtra
 
 from exotom.models import Transit
 from exotom.photometry import TransitLightCurveExtractor, LightCurvesExtractor
@@ -266,6 +266,27 @@ class TransitProcessor:
                 linewidth=1,
                 color="blue",
             )
+
+        plt.xlabel("t0")
+        plt.ylabel("Relative Intensity")
+        # add second axis for magnitude
+        ax = plt.gca()
+        second_y_axis = ax.secondary_yaxis(
+            "right",
+            functions=(
+                lambda x: -2.5 * np.log10(1 / x),
+                lambda y: np.power(10, y / 2.5),
+            ),
+        )
+        second_y_axis.set_ylabel("Mag")
+
+        # plot horizontal line at predicted depth
+        try:
+            depth = self.target.targetextra_set.get(key="Depth (mmag)").float_value
+            plt.axhline(y=np.power(10, -depth / 1000 / 2.5), color="black")
+        except TargetExtra.DoesNotExist:
+            pass
+
         plt.tight_layout()
         plt.savefig(file_name, format="jpg", dpi=200)
 
