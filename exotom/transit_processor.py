@@ -37,10 +37,16 @@ class TransitProcessor:
         # this try-except is needed because in the beginning "transit_id" was not written to the parameters dict
         try:
             self.transit: Transit = Transit.objects.get(
-                id=self.observation_record.parameters["transit_id"]
+                target__id=self.observation_record.parameters["target_id"],
+                number=self.observation_record.parameters["transit"],
             )
-        except:
-            self.transit = None
+        except (KeyError):
+            try:
+                self.transit: Transit = Transit.objects.get(
+                    id=self.observation_record.parameters["transit_id"]
+                )
+            except (KeyError, Transit.DoesNotExist):
+                self.transit = None
 
         self.transit_name = data_product_group.name
         self.light_curve_name = f"{self.transit_name}_light_curve"
