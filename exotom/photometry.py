@@ -7,7 +7,6 @@ import pandas as pd
 import copy
 from typing import Union
 
-from batman import TransitParams
 from tom_targets.models import TargetExtra
 
 from exotom.models import Transit
@@ -51,6 +50,7 @@ class TransitLightCurveExtractor:
             print("Doing fit of best relative lightcurve")
             good_lcs_df, fit_result = self.make_best_fit(filtered_light_curves)
         else:
+            print("Transit not given, so not doing fit.")
             good_lcs_df = filtered_light_curves
 
         lcs_with_target_rel_lc_df = (
