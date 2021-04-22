@@ -106,6 +106,7 @@ EXPOSURE_TIME_MODEL_BY_INSTRUMENT = {
 
 PROPOSALS = {"priority": "exo", "low_priority": "exofiller"}
 
+MAX_EXPOSURES_PER_REQUEST = 1300
 ```
 
 ### make django migrations

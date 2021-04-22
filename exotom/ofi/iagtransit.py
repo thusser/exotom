@@ -1,7 +1,9 @@
+import requests
 from astropy.time import Time
 from crispy_forms.layout import Div, Layout
 from django import forms
 from dateutil.parser import parse
+from tom_common.exceptions import ImproperCredentialsException
 from tom_targets.models import Target, TargetExtra
 from django.conf import settings
 import astropy.units as u
@@ -362,6 +364,9 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
         return payload
 
 
+PORTAL_URL = settings.FACILITIES["IAG"]["portal_url"]
+
+
 class IAGTransitFacility(IAGFacility):
     """
     The ``LCOFacility`` is the interface to the Las Cumbres Observatory Observation Portal. For information regarding
@@ -376,3 +381,42 @@ class IAGTransitFacility(IAGFacility):
             return self.observation_forms[observation_type]
         except KeyError:
             return IAGTransitForm
+
+    def get_number_of_exposures(self, observation_payload):
+        response = make_request(
+            "POST",
+            PORTAL_URL + "/api/requestgroups/validate/",
+            json=observation_payload,
+            headers=self._portal_headers(),
+        )
+        response_json = response.json()
+
+        if "errors" in response_json and response_json["errors"] != {}:
+            if response_json["errors"] == {
+                "requests": [
+                    {"windows": [{"end": ["Window end time must be in the future"]}]}
+                ]
+            } or response_json["errors"] == {
+                "requests": [
+                    {"windows": [{"start": ["Window end time must be in the future"]}]}
+                ]
+            }:
+                return -1
+            else:
+                raise Exception(response_json["errors"])
+
+        total_duration = response_json["request_durations"]["requests"][0]["duration"]
+        exposure_plus_readout = response_json["request_durations"]["requests"][0][
+            "configurations"
+        ][0]["instrument_configs"][0]["duration"]
+
+        n_exposures = total_duration / exposure_plus_readout
+        return n_exposures
+
+
+def make_request(*args, **kwargs):
+    response = requests.request(*args, **kwargs)
+    if 400 <= response.status_code < 500:
+        raise ImproperCredentialsException("IAG: " + str(response.content))
+    response.raise_for_status()
+    return response
