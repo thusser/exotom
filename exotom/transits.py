@@ -6,7 +6,6 @@ from astropy.coordinates import SkyCoord, EarthLocation
 from astropy.time import Time, TimeDelta
 import astropy.units as u
 import numpy as np
-from tom_observations.facility import get_service_classes
 
 from exotom.models import Transit, Target, TransitObservationDetails
 from exotom.ofi.iagtransit import IAGTransitFacility
@@ -105,9 +104,7 @@ def calculate_transits_during_next_n_days(
             # loop facilities
             for site, observer in observers.items():
                 # create transit details
-                details = create_transit_details(
-                    transit, observer, target_coords, start, eclipse, end, site
-                )
+                details = create_transit_details(transit, observer, target_coords, site)
 
                 # save
                 details.save()
@@ -116,41 +113,43 @@ def calculate_transits_during_next_n_days(
         obstime = eclipse + TimeDelta(30 * u.minute)
 
 
-def create_transit_details(transit: Transit, observer, coords, start, mid, end, site):
-    # margin
-    margin = 25 * u.min
+def create_transit_details(transit: Transit, observer, coords, site):
+    start, mid, end = transit.start, transit.mid, transit.end
+    observing_start, observing_end = transit.get_observing_window()
 
-    # get position of sun and moon
-    sun = {
-        "start": observer.sun_altaz(start - margin),
-        "mid": observer.sun_altaz(mid),
-        "end": observer.sun_altaz(end + margin),
-    }
-    moon = observer.moon_altaz(mid)
+    (
+        ingress_observing_start,
+        ingress_observing_end,
+    ) = transit.get_ingress_observing_window()
+    egress_observing_start, egress_observing_end = transit.get_egress_observing_window()
 
-    # position of target
-    target = {
-        "start": observer.altaz(start - margin, coords),
-        "mid": observer.altaz(mid, coords),
-        "end": observer.altaz(end + margin, coords),
-    }
+    times = [
+        start,
+        mid,
+        end,
+        observing_start,
+        observing_end,
+        ingress_observing_start,
+        ingress_observing_end,
+        egress_observing_start,
+        egress_observing_end,
+    ]
 
-    # coords to altaz at mid-transit
-    alt_az_start = observer.altaz(start, coords)
-    alt_az_mid = observer.altaz(mid, coords)
-    alt_az_end = observer.altaz(end, coords)
+    sun_positions = {time: observer.sun_altaz(time) for time in times}
+    target_positions = {time: observer.altaz(time, coords) for time in times}
+    moon_positions = {time: observer.moon_altaz(mid) for time in times}
 
-    # create new TransitSite and fill it
+    # create new TransitObservationDetails object and fill it
     details = TransitObservationDetails()
-    details.target_alt_start = target["start"].alt.degree
-    details.target_alt_mid = target["mid"].alt.degree
-    details.target_alt_end = target["end"].alt.degree
-    details.sun_alt_mid = sun["mid"].alt.degree
-    details.moon_alt_mid = moon.alt.degree
-    details.moon_dist_mid = alt_az_mid.separation(moon).degree
+    details.target_alt_mid = target_positions[mid].alt.degree
+    details.target_alt_start = target_positions[start].alt.degree
+    details.target_alt_end = target_positions[end].alt.degree
+    details.sun_alt_mid = sun_positions[mid].alt.degree
+    details.moon_alt_mid = moon_positions[mid].alt.degree
+    details.moon_dist_mid = target_positions[mid].separation(moon_positions[mid]).degree
 
-    moon_dist_start = alt_az_start.separation(moon).degree
-    moon_dist_end = alt_az_end.separation(moon).degree
+    moon_dist_start = target_positions[start].separation(moon_positions[start]).degree
+    moon_dist_end = target_positions[end].separation(moon_positions[end]).degree
 
     transit_observation_constraints_at_site = SITES[site][
         "transitObservationConstraints"
@@ -160,13 +159,27 @@ def create_transit_details(transit: Transit, observer, coords, start, mid, end, 
         details.target_alt_start > 30
         and details.target_alt_mid > 30
         and details.target_alt_end > 30
-        and sun["start"].alt.degree < -12
+        and sun_positions[start].alt.degree < -12
         and details.sun_alt_mid < -12
-        and sun["end"].alt.degree < -12
+        and sun_positions[end].alt.degree < -12
+        and moon_positions[start].alt.degree > 30
         and details.moon_dist_mid > 30
+        and moon_positions[end].alt.degree > 30
     )
     details.observable = (
-        details.visible
+        # same as visible but with margins = baseline observation time and transit timing errors
+        (
+            target_positions[observing_start].alt.degree > 30
+            and details.target_alt_mid > 30
+            and target_positions[observing_end].alt.degree > 30
+            and sun_positions[observing_start].alt.degree < -12
+            and details.sun_alt_mid < -12
+            and sun_positions[observing_end].alt.degree < -12
+            and moon_positions[observing_start].alt.degree > 30
+            and details.moon_dist_mid > 30
+            and moon_positions[observing_end].alt.degree > 30
+        )
+        # telescope constraints
         and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
         and transit.depth
         >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
@@ -175,23 +188,29 @@ def create_transit_details(transit: Transit, observer, coords, start, mid, end, 
     # visibility/observability for ingress/egress of transit only
     details.ingress_visible = (
         details.target_alt_start > 30
-        and sun["start"].alt.degree < -12
+        and sun_positions[start].alt.degree < -12
         and moon_dist_start > 30
     )
     details.ingress_observable = (
         details.ingress_visible
+        # check margins = baseline observation time and transit timing errors
+        and target_positions[ingress_observing_start].alt.degree > 30
+        and target_positions[ingress_observing_end].alt.degree > 30
+        # telescope constraints
         and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
         and transit.depth
         >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
     )
 
     details.egress_visible = (
-        details.target_alt_end > 30
-        and sun["end"].alt.degree < -12
+        details.target_alt_end
+        and sun_positions[end].alt.degree < -12
         and moon_dist_end > 30
     )
     details.egress_observable = (
         details.egress_visible
+        and target_positions[egress_observing_start].alt.degree > 30
+        and target_positions[egress_observing_end].alt.degree > 30
         and transit.mag <= transit_observation_constraints_at_site["maxMagnitude"]
         and transit.depth
         >= transit_observation_constraints_at_site["minTransitDepthInMmag"]
