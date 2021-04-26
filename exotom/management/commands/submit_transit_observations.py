@@ -77,7 +77,6 @@ def submit_transit_to_instrument(
     facility = IAGTransitFacility()
 
     n_exposures = facility.get_number_of_exposures(observation_payload)
-    print(n_exposures)
     if n_exposures > MAX_EXPOSURES_PER_REQUEST:
         raise Exception(
             f"{n_exposures} requested which is more than {MAX_EXPOSURES_PER_REQUEST}"
