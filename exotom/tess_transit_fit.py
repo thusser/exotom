@@ -297,12 +297,22 @@ class TessTransitFit:
         params.t0 = Time(self.transit.mid).jd
         params.per = self.get_target_extra(key="Period (days)").float_value
         # convert to solar radii
+        PLANET_RADIUS_DEFAULT = 2.0
+        planet_radius_in_earth_radii = self.get_target_extra(
+            key="Planet Radius (R_Earth)"
+        ).float_value
         planet_radius_in_solar_radii = (
-            self.get_target_extra(key="Planet Radius (R_Earth)").float_value / 109.2
+            planet_radius_in_earth_radii
+            if planet_radius_in_earth_radii
+            else PLANET_RADIUS_DEFAULT
+        ) / 109.2
+        DEFAULT_STELLAR_RADIUS = 2.0
+        stellar_radius = self.get_target_extra(key="Stellar Radius (R_Sun)").float_value
+        stellar_radius_in_solar_radii = (
+            stellar_radius if stellar_radius else DEFAULT_STELLAR_RADIUS
         )
         planet_radius_in_stellar_radii = (
-            planet_radius_in_solar_radii
-            / self.get_target_extra(key="Stellar Radius (R_Sun)").float_value
+            planet_radius_in_solar_radii / stellar_radius_in_solar_radii
         )
         params.rp = planet_radius_in_stellar_radii
 
@@ -318,37 +328,44 @@ class TessTransitFit:
         return params
 
     def estimate_orbit_radius(self):
-        # constants
-        grav_constant = 6.7e-11
-        abs_mag_sun = 4.83
-        mass_sun = 2e30
-        radius_sun_in_m = 7e8
+        try:
+            # constants
+            grav_constant = 6.7e-11
+            abs_mag_sun = 4.83
+            mass_sun = 2e30
+            radius_sun_in_m = 7e8
 
-        # system parameters
-        apparent_magnitude = self.get_target_extra(key="Mag (TESS)").float_value
-        distance = self.get_target_extra(key="Stellar Distance (pc)").float_value
-        period_in_s = (
-            self.get_target_extra(key="Period (days)").float_value * 24 * 60 * 60
-        )
-        radius_star_in_sun_radii = self.get_target_extra(
-            key="Stellar Radius (R_Sun)"
-        ).float_value
+            # system parameters
+            apparent_magnitude = self.get_target_extra(key="Mag (TESS)").float_value
+            distance = self.get_target_extra(key="Stellar Distance (pc)").float_value
+            period_in_s = (
+                self.get_target_extra(key="Period (days)").float_value * 24 * 60 * 60
+            )
+            DEFAULT_STELLAR_RADIUS = 0.5
+            stellar_radius = self.get_target_extra(
+                key="Stellar Radius (R_Sun)"
+            ).float_value
+            radius_star_in_sun_radii = (
+                stellar_radius if stellar_radius else DEFAULT_STELLAR_RADIUS
+            )
 
-        # calculation
-        absolute_magnitude = apparent_magnitude - 5 * (np.log10(distance) - 1)
-        L_divided_by_L_sun = np.power(10, 0.4 * (abs_mag_sun - absolute_magnitude))
-        # mass-luminosity relation which only holds for main sequence stars!
-        mass = mass_sun * np.power(L_divided_by_L_sun, 0.25)
-        # kepler 3
-        orbit_radius = np.power(
-            mass * grav_constant * period_in_s ** 2 / (4 * np.pi), 1 / 3
-        )
+            # calculation
+            absolute_magnitude = apparent_magnitude - 5 * (np.log10(distance) - 1)
+            L_divided_by_L_sun = np.power(10, 0.4 * (abs_mag_sun - absolute_magnitude))
+            # mass-luminosity relation which only holds for main sequence stars!
+            mass = mass_sun * np.power(L_divided_by_L_sun, 0.25)
+            # kepler 3
+            orbit_radius = np.power(
+                mass * grav_constant * period_in_s ** 2 / (4 * np.pi), 1 / 3
+            )
 
-        # convert to stellar radii
-        orbit_radius_in_sun_radii = orbit_radius / radius_sun_in_m
-        orbit_radius_in_stellar_radii = (
-            orbit_radius_in_sun_radii / radius_star_in_sun_radii
-        )
+            # convert to stellar radii
+            orbit_radius_in_sun_radii = orbit_radius / radius_sun_in_m
+            orbit_radius_in_stellar_radii = (
+                orbit_radius_in_sun_radii / radius_star_in_sun_radii
+            )
+        except:
+            orbit_radius_in_stellar_radii = 20
 
         return orbit_radius_in_stellar_radii
 
