@@ -35,6 +35,12 @@ except (AttributeError, KeyError):
         "max_airmass": 1.5,
     }
 
+from local_settings import (
+    OBSERVE_N_SIGMA_AROUND_TRANSIT,
+    BASELINE_LENGTH_FOR_WHOLE_TRANSIT,
+    BASELINE_LENGTH_FOR_TRANSIT_CONTACT,
+)
+
 
 class IAGTransitForm(IAGImagingObservationForm):
     name = forms.CharField(max_length=200)
@@ -125,11 +131,8 @@ class IAGTransitForm(IAGImagingObservationForm):
             target=target, number=self.cleaned_data["transit"]
         )
 
-        # calculate start, end and duration
-        n_sigma = 2
-        baseline = 15 * u.min
-        start = Time(transit.start_earliest(n_sigma=n_sigma)) - baseline
-        end = Time(transit.end_latest(n_sigma=n_sigma)) + baseline
+        # get start, end and duration
+        start, end = transit.get_observing_window()
         duration = end - start
 
         # return it
@@ -298,18 +301,17 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
         contact = self.cleaned_data["contact"]
 
         # calculate start, end and duration
-        n_sigma = 2
-        baseline = 10 * u.min
         if contact == "INGRESS":
-            start = Time(transit.start_earliest(n_sigma=n_sigma)) - baseline
-            end = Time(transit.start_latest(n_sigma=n_sigma)) + baseline
-            duration = end - start
+            start, end = transit.get_ingress_observing_window()
         elif contact == "EGRESS":
-            start = Time(transit.end_earliest(n_sigma=n_sigma)) - baseline
-            end = Time(transit.end_latest(n_sigma=n_sigma)) + baseline
-            duration = end - start
+            start, end = transit.get_egress_observing_window()
+        else:
+            raise Exception(
+                f"Improper contact string '{contact}' given. Only 'INGRESS/'EGRESS' allowed."
+            )
 
-        # return it
+        duration = end - start
+
         return {"start": start.isot, "end": end.isot}, duration
 
     def _build_instrument_config(self):
