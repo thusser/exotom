@@ -425,10 +425,14 @@ class LightCurvesExtractor:
 
         required_columns = ["ra", "dec", "time", "flux"]
         filtered_catalogs = []
-        for cat in image_catalogs:
+        for icat, cat in enumerate(image_catalogs):
             for required_column in required_columns:
                 if required_column not in cat.columns:
+                    print(
+                        f"Filtering out frame {icat}/{len(image_catalogs)} because column {required_column} is missing."
+                    )
                     break
             else:  # nobreak
                 filtered_catalogs.append(cat)
+
         return filtered_catalogs

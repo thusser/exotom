@@ -60,6 +60,17 @@ class TransitProcessor:
     def check_data_products_validity(self):
         if len(self.data_products) == 0:
             raise ValueError("DataProductGroup contains no dataproducts.")
+
+        for dp in self.data_products:
+            try:
+                path = dp.data.path
+                if path is None or path == "":
+                    raise Exception()
+            except:
+                raise ValueError(
+                    f"Dataproduct {dp} does not have well defined DataProduct.data.path"
+                )
+
         self.check_all_dataproducts_are_photometry_catalogs(self.data_products)
 
     def check_all_dataproducts_are_photometry_catalogs(self, dps):
