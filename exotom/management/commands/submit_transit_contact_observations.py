@@ -4,7 +4,11 @@ from django.core.management.base import BaseCommand
 from tom_observations.models import ObservationRecord
 
 from exotom.settings import FACILITIES, SITES
-from exotom.ofi.iagtransit import IAGTransitForm, IAGTransitSingleContactForm
+from exotom.ofi.iagtransit import (
+    IAGTransitForm,
+    IAGTransitSingleContactForm,
+    IAGTransitFacility,
+)
 from tom_iag.iag import IAGFacility, get_instruments
 from exotom.models import Target, Transit
 
@@ -12,6 +16,8 @@ from exotom.transits import calculate_transits_during_next_n_days
 from exotom.exposure_calculator import calculate_exposure_time
 from astropy.time import Time
 import pytz
+
+from local_settings import MAX_EXPOSURES_PER_REQUEST
 
 
 class Command(BaseCommand):
@@ -75,7 +81,7 @@ def submit_transit_single_contact_to_instrument(
         transit, instrument_type, instrument_details, contact
     )
 
-    form = IAGTransitForm(initial=observation_data, data=observation_data)
+    form = IAGTransitSingleContactForm(initial=observation_data, data=observation_data)
     form.is_valid()
     observation_payload = form.observation_payload()
 
@@ -91,6 +97,8 @@ def submit_transit_single_contact_to_instrument(
     print(
         f"Submitting transit {transit} with transit id {transit.id} and target id {transit.target_id}"
     )
+
+    observation_ids = facility.submit_observation(observation_payload)
 
     # create observation record
     for observation_id in observation_ids:
