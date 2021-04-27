@@ -39,9 +39,12 @@ class Test(TestCase):
             "ra": 340.08462499999996,
             "dec": 69.50373055555555,
         }
-
+        target1_extra_fields = {
+            "Epoch (BJD) err": 0.000252,  # made up value
+            "Period (days) err": 1e-6,  # made up value
+        }
         target1 = Target(**target1_dict)
-        target1.save()  # extras=target1_extra_fields)
+        target1.save(extras=target1_extra_fields)
 
         obs_id = 9876
         transit_number = 1234
@@ -109,8 +112,10 @@ class Test(TestCase):
             "Priority Proposal": False,
             "Mag (TESS)": 11.6281,
             "Epoch (BJD)": 2458902.718492,
+            "Epoch (BJD) err": 0.000252,  # made up value,
             "Duration (hours)": 3.588807,
             "Period (days)": 4.617208,
+            "Period (days) err": 1e-6,  # made up value
             "Depth (mmag)": 12.207647,
             "Planet Radius (R_Earth)": 12.041519,
             "Stellar Radius (R_Sun)": 1.1136,

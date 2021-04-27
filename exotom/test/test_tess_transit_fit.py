@@ -28,7 +28,9 @@ class Test(TestCase):
             "Priority Proposal": False,
             "Mag (TESS)": 11.5384,
             "Epoch (BJD)": 2458902.718492,
+            "Epoch (BJD) err": 0.000252,  # made up value
             "Period (days)": 4.617208,
+            "Period (days) err": 1e-6,  # made up value
             "Duration (hours)": 3.588807,
             "Depth (mmag)": 12.207647,
             "Stellar Distance (pc)": 321.084,
@@ -48,7 +50,9 @@ class Test(TestCase):
             "Priority Proposal": False,
             "Mag (TESS)": 11.7551,
             "Epoch (BJD)": 2458930.329998,
+            "Epoch (BJD) err": 0.000252,  # made up value
             "Period (days)": 3.212983,
+            "Period (days) err": 1e-6,  # made up value
             "Duration (hours)": 2.361831,
             "Depth (mmag)": 25.410942,
             "Stellar Distance (pc)": 142.751,
