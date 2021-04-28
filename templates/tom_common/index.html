@@ -1,10 +1,11 @@
 {% extends 'tom_common/base.html' %}
-{% load static targets_extras observation_extras dataproduct_extras tom_common_extras %}
+{% load static targets_extras observation_extras dataproduct_extras tom_common_extras whats_new %}
 {% block title %}Home{% endblock %}
 {% block content %}
 <div class="row">
   <div class="col-md-8">
-    <h3>Next steps</h3>
+    <h2>What's new</h2>
+    {% whats_new %}
     <ul>
       <li>
         Check out the <a href="https://tom-toolkit.readthedocs.io/en/stable/" title="TOM Toolkit home page">TOM
