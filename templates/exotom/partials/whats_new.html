@@ -1,11 +1,21 @@
 {% load static whats_new %}
-<h5> Observations scheduled within the last {{ shown_period_in_hours }} hours:</h5>
+<h5> Latest {{ n_most_recent_observations }} scheduled or completed observations.</h5>
 <br/>
 
 {% for obs in recent_observations %}
 <div>
-    <a href="https://observe.monet.uni-goettingen.de/requests/{{ obs.observation_record.observation_id }}/">
+    <a href="{% url 'transitobservationdetails' obs.observation_record.target.id obs.observation_record.parameters.transit %}">
         <b> <font size="+2"> &#9864; </font> {{ obs.observation_record.parameters.name }} </b>
+    </a>
+    <br/>
+    {% if obs.observation_record.scheduled_start %}
+        scheduled from {{ obs.observation_record.scheduled_start }} to {{ obs.observation_record.scheduled_end }}
+    {% else %}
+        (not scheduled)
+    {% endif %}
+    <br/>
+    <a href="https://observe.monet.uni-goettingen.de/requests/{{ obs.observation_record.observation_id }}/">
+        &rightarrow; Observation Portal
     </a>
     <br/>
     Target: <a href="{% url 'tom_targets:detail' obs.observation_record.target.id %}"> {{ obs.observation_record.target.name }} </a> <br/>
@@ -17,10 +27,12 @@
             False
         {% endif %}
     <br/>
-    Image: <br/>
-    <a href="{{ obs.image_url }}">
-        <img src="{{ obs.image_url }}" width="650"/>
-    </a>
+    {% if obs.image_url != "" %}
+        Image: <br/>
+        <a href="{{ obs.image_url }}">
+            <img src="{{ obs.image_url }}" width="650"/>
+        </a>
+    {% endif %}
 </div>
 <br/>
 

@@ -4,20 +4,41 @@ from django import template
 from tom_dataproducts.models import DataProduct
 from tom_observations.models import ObservationRecord
 
+from exotom.models import Transit
+
 register = template.Library()
 
 
+def get_observation_record_datetime(obs_record):
+    if obs_record.scheduled_start:
+        return obs_record.scheduled_start
+    else:
+        try:
+            return Transit.objects.get(
+                target__id=obs_record.parameters["target_id"],
+                number=obs_record.parameters["transit"],
+            ).start
+        except:
+            return obs_record.created
+
+
 @register.inclusion_tag("exotom/partials/whats_new.html")
-def whats_new():
+def whats_new(n_most_recent_observations=5):
 
-    shown_period_in_hours = 48
-
-    now_minus_period_hours = datetime.datetime.now() - datetime.timedelta(
-        hours=shown_period_in_hours
-    )
     recent_observation_records = ObservationRecord.objects.filter(
-        scheduled_start__gt=now_minus_period_hours
+        scheduled_start__isnull=False
     )
+    recent_observation_records = sorted(
+        recent_observation_records,
+        key=get_observation_record_datetime,
+        reverse=True,
+    )
+    if n_most_recent_observations <= len(recent_observation_records):
+        recent_observation_records = recent_observation_records[
+            :n_most_recent_observations
+        ]
+    else:
+        n_most_recent_observations = len(recent_observation_records)
 
     recent_observations = []
     for obs_record in recent_observation_records:
@@ -32,7 +53,7 @@ def whats_new():
         recent_observations.append({"observation_record": obs_record, "image_url": url})
 
     return {
-        "shown_period_in_hours": shown_period_in_hours,
+        "n_most_recent_observations": n_most_recent_observations,
         "recent_observations": recent_observations,
     }
 
