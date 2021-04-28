@@ -40,9 +40,7 @@ class TransitLightCurveExtractor:
         """
         light_curves_df = copy.deepcopy(self.all_light_curves_df)
 
-        filtered_light_curves = (
-            light_curves_df  # self.filter_noisy_light_curves(light_curves_df)
-        )
+        filtered_light_curves = self.filter_noisy_light_curves(light_curves_df)
 
         # good_lcs_df, fit_result = self.drop_bad_ref_sources_by_fit_chi_squared(filtered_light_curves)
         fit_result: Union[FitResult, None] = None
@@ -63,7 +61,7 @@ class TransitLightCurveExtractor:
         )
         return lcs_with_target_rel_lc_df, fit_result
 
-    def filter_noisy_light_curves(self, light_curves_df, kappa: float = 0.5):
+    def filter_noisy_light_curves(self, light_curves_df, kappa: float = 0.1):
         """Filters out light curves of ref sources that are noisy. For that it calculates the normed relative light curve
         of the ref source and target and does a kappa-sigma clipping on the stddev of that.
 
