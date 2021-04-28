@@ -1,72 +1,92 @@
-import argparse
-from datetime import datetime, timedelta
+import datetime
+import io
 
-# python ./targets/create_observation_record_and_transit.py --observation_id 2 --target_name 1809  --start_date 2021 3 5 15
+import requests
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+from astropy.time import Time
 from tom_observations.models import ObservationRecord
 from tom_targets.models import Target
 
-from exotom.models import Transit
-from exotom.transits import calculate_transits_during_next_n_days
+from tom_iag.iag import IAGFacility
+import pandas as pd
+import numpy as np
+
+from exotom import settings
+from exotom.photometry import LightCurvesExtractor
 
 
-def create_observation_record_and_transit(
-    observation_id: int,
-    target_name: str,
-    transit_number: int,
-    contact: str = "",
-    start_date_list: [int] = None,
-):
-    """Create database objects for a transit observation submitted from a different ExoTOM instance.
+def evaluate_50cm_exposure_times():
+    peaks = {}
 
-    When observations were submitted from a different ExoTom instance, the ObservationRecord and Transit
-    database objects are missing (assuming the target object actually exists).
-    So if you want to run the analysis on a different instance you have
-    to create the Transit object (done here by calling the calculate_transits_during_next_n_days function)
-    and then the ObservationRecord.
+    for obs_record in ObservationRecord.objects.filter(
+        status="COMPLETED",
+        created__gt=datetime.datetime(2021, 3, 29),  # , target__name__contains='2138'
+    ):
+        products = get_reduced_products(obs_record)
 
-    All necessary parameters can be taken from the observation request page or the obsevation status page.
+        dfs: [pd.DataFrame] = []
+        for product in products[::5]:
+            dfs.append(get_df(product))
 
-    :param observation_id: "request id" in the observation portal
-    :param target_name: str. part (eg "TOI 1809" or "1809") of the target name used to find the target object. Should be unique.
-    :param transit_number: number of the transit (should be observation request name)
-    :param contact: str = "". "INGRESS" or "EGRESS"
-    :param start_date_list: [int] = None. date less than 24 hours before the transit as [year, month, day, hour]
-        (eg [2021, 4, 3, 15]). If not given, now - 24 hours is used.
-    """
-    if start_date_list is None:
-        start_time = datetime.now() - timedelta(hours=24)
+        target_coord = SkyCoord(
+            obs_record.target.ra * u.deg, obs_record.target.dec * u.deg
+        )
 
-    print(start_time, observation_id, target_name)
+        lce = LightCurvesExtractor(dfs, target_coord)
+        lce.get_target_and_ref_stars_light_curves_df()
 
-    target: Target = Target.objects.get(name__contains=target_name)
-    calculate_transits_during_next_n_days(target, n_days=1, start_time=start_time)
+        target_id = lce.target_id
+        matched_cats = lce.matched_image_catalogs_with_target
 
-    transit: Transit = Transit.objects.get(target=target, number=transit_number)
+        peakss = []
+        peakxs = []
+        peakys = []
+        for cat in matched_cats:
+            # print(cat)
+            peakss.append(float(cat[cat["id"] == target_id]["peak"]))
+            peakxs.append(int(cat[cat["id"] == target_id]["xpeak"]))
+            peakys.append(int(cat[cat["id"] == target_id]["ypeak"]))
 
-    oo = ObservationRecord.objects.create(
-        target=target,
-        facility="IAGTransit",
-        observation_id=observation_id,
-        parameters={
-            "transit": transit_number,
-            "transit_id": transit.id,
-            "name": f"Target {target.name}, transit #{transit.number} " + contact,
-        },
+        target = obs_record.target
+        peaks[target.name] = {
+            "peak": np.mean(np.array(peakss)),
+            "peaks": peakss,
+            "peak_std": np.std(np.array(peakss)),
+            "peakxs": peakxs,
+            "peakys": peakys,
+            "mag": target.targetextra_set.get(key="Mag (TESS)").float_value,
+        }
+
+        print(len(dfs))
+    print(peaks)
+
+
+def get_df(product):
+    product_data = requests.get(
+        product["url"].replace("download", "catalog"),
+        headers=IAGFacility().archive_headers(),
+    ).content
+    # print(product_data)
+    time_str = product["created"]
+    df = pd.read_csv(io.StringIO(product_data.decode("utf-8")))
+    df["time"] = float(Time(time_str).jd)
+    return df
+
+
+def get_reduced_products(obs_record):
+    all_products = IAGFacility().data_products(obs_record.observation_id)
+    all_products = list(
+        filter(lambda prod: prod["imagetype"] == "object", all_products)
     )
+    all_products_reduced = list(
+        filter(
+            lambda prod: prod["rlevel"] == 1,
+            all_products,
+        )
+    )
+    return all_products_reduced
 
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--observation_id", type=int, required=True)
-    parser.add_argument("--target_name", type=str, required=True)
-    parser.add_argument("--transit_number", type=int, required=True)
-    parser.add_argument(
-        "--start_date", action="store", required=True, nargs=4, type=int
-    )
-
-    args = parser.parse_args()
-
-    create_observation_record_and_transit(
-        args.observation_id, args.target_name, args.transit_number, args.start_date
-    )
+    evaluate_50cm_exposure_times()
