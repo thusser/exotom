@@ -233,31 +233,45 @@ class TransitProcessor:
             tmpfile.close()
 
     def save_plot_of_transit_data_and_fit(self, times, file_name):
-        plt.figure(figsize=(12, 9))
+        fig = plt.figure(figsize=(12, 9))
         baseline_function = None
         if self.best_fit_result is not None:
             fit_function = self.best_fit_result.fitted_model
             baseline_function = self.best_fit_result.baseline_model
             label = self.get_best_fit_params_legend_string()
 
+            # plot line at observed mid transit
+            plt.axvline(
+                x=self.best_fit_result.params.t0,
+                color="red",
+                linestyle="dashed",
+                zorder=10,
+            )
+
             # plot airmass detrended data if baseline_function is given
+            times_across_whole_transit = np.linspace(
+                min(times[0], Time(self.transit.start_earliest()).jd),
+                max(times[-1], Time(self.transit.end_latest()).jd),
+                1000,
+            )
             if baseline_function is not None:
                 plt.plot(
-                    times,
-                    fit_function(times) / baseline_function(times),
+                    times_across_whole_transit,
+                    fit_function(times_across_whole_transit)
+                    / baseline_function(times_across_whole_transit),
                     color="red",
                     label=label,
                 )
             else:
-                plt.plot(times, fit_function(times), color="red", label=label)
+                plt.plot(
+                    times_across_whole_transit,
+                    fit_function(times_across_whole_transit),
+                    color="red",
+                    label=label,
+                )
 
             plt.legend()
-        plt.title(
-            f"Relative normalized {self.best_light_curves_dp.product_id} and fit"
-            + "(airmass detrended)"
-            if baseline_function is not None
-            else ""
-        )
+
         if baseline_function is not None:
             plt.scatter(
                 times,
@@ -280,6 +294,45 @@ class TransitProcessor:
                 color="blue",
             )
 
+        ### draw predicted values ###
+        # plot horizontal line at predicted depth
+        predicted_color = "green"
+        try:
+            depth = self.target.targetextra_set.get(key="Depth (mmag)").float_value
+            plt.axhline(y=np.power(10, -depth / 1000 / 2.5), color=predicted_color)
+        except TargetExtra.DoesNotExist:
+            pass
+
+        try:
+            # draw predicted ingress, mid, egress with 1 sigma errors
+            tr: Transit = self.transit
+            starts = [
+                Time(t).jd for t in [tr.start_earliest(), tr.start, tr.start_latest()]
+            ]
+            mids = [Time(t).jd for t in [tr.mid_earliest(), tr.mid, tr.mid_latest()]]
+            ends = [Time(t).jd for t in [tr.end_earliest(), tr.end, tr.end_latest()]]
+
+            plt.axvline(x=starts[0], color=predicted_color, linestyle="dashed")
+            plt.axvline(x=starts[1], color=predicted_color, linestyle="dashed")
+            plt.axvline(x=starts[2], color=predicted_color, linestyle="dashed")
+
+            plt.axvline(x=mids[0], color=predicted_color)
+            plt.axvline(x=mids[1], color=predicted_color)
+            plt.axvline(x=mids[2], color=predicted_color)
+
+            plt.axvline(x=ends[0], color=predicted_color, linestyle="dotted")
+            plt.axvline(x=ends[1], color=predicted_color, linestyle="dotted")
+            plt.axvline(x=ends[2], color=predicted_color, linestyle="dotted")
+        except:
+            pass
+
+        ### draw labels etc ###
+        plt.title(
+            f"Relative normalized {self.best_light_curves_dp.product_id} and fit"
+            + " (airmass detrended)"
+            if baseline_function is not None
+            else ""
+        )
         plt.xlabel("t0")
         plt.ylabel("Relative Intensity")
         # add second axis for magnitude
@@ -292,16 +345,11 @@ class TransitProcessor:
             ),
         )
         second_y_axis.set_ylabel("Mag")
+        plt.axhline(y=1, color="grey", zorder=-10)
 
-        # plot horizontal line at predicted depth
-        try:
-            depth = self.target.targetextra_set.get(key="Depth (mmag)").float_value
-            plt.axhline(y=np.power(10, -depth / 1000 / 2.5), color="black")
-        except TargetExtra.DoesNotExist:
-            pass
-
-        plt.tight_layout()
+        # plt.tight_layout()
         plt.savefig(file_name, format="jpg", dpi=200)
+        plt.close(fig)
 
     def get_best_fit_params_legend_string(self):
         key_val_list = [

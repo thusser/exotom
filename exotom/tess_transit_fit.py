@@ -370,9 +370,16 @@ class TessTransitFit:
         return orbit_radius_in_stellar_radii
 
     def get_airmass_function(self, times: np.array):
-        astropy_times = Time(times, format="jd")
+        # extend times so it extrapolates to edges of transit (with errors) is possible
+        extended_times = np.linspace(
+            min(times[0], Time(self.transit.start_earliest(n_sigma=1.1)).jd),
+            max(times[-1], Time(self.transit.end_latest(n_sigma=1.1)).jd),
+            1000,
+        )
+        astropy_times = Time(extended_times, format="jd")
+
         airmass = self.get_airmass(astropy_times)
-        airmass_func = interpolate.interp1d(times, airmass, kind="linear")
+        airmass_func = interpolate.interp1d(extended_times, airmass, kind="linear")
         return airmass_func
 
     def get_airmass(self, times):
