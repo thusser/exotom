@@ -1,5 +1,5 @@
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, Mock
 
 import pandas as pd
 from astropy.time import Time
@@ -12,6 +12,8 @@ from tom_observations.models import ObservationRecord
 
 from exotom import transit_processor
 from exotom.models import Target, Transit
+from exotom import observation_downloader
+from exotom.transit_processor import TransitProcessor
 from exotom.transits import calculate_transits_during_next_n_days
 
 
@@ -71,9 +73,17 @@ class Test(TestCase):
             dp.save()
             print(dp.data)
 
-        transit_processorr = transit_processor.TransitProcessor(transit_dp_group)
-
-        transit_processorr.process()
+        with patch.object(
+            observation_downloader.TransitObservationDownloader,
+            "make_photometry_catalog_data_product_group",
+            new=Mock(return_value=transit_dp_group),
+        ) as make_dp_group:
+            downloader = observation_downloader.TransitObservationDownloader(obs_record)
+            all_lightcurves_dp = downloader.attempt_create_all_lightcurves_dataproduct(
+                clean_up=False
+            )
+            processor = TransitProcessor(all_lightcurves_dp)
+            processor.process()
 
         photometry_cat_dps = DataProduct.objects.filter(
             data_product_type="image_photometry_catalog"
@@ -154,9 +164,17 @@ class Test(TestCase):
             dp.save()
             print(dp.data)
 
-        transit_processorr = transit_processor.TransitProcessor(transit_dp_group)
-
-        transit_processorr.process()
+        with patch.object(
+            observation_downloader.TransitObservationDownloader,
+            "make_photometry_catalog_data_product_group",
+            new=Mock(return_value=transit_dp_group),
+        ) as make_dp_group:
+            downloader = observation_downloader.TransitObservationDownloader(obs_record)
+            all_lightcurves_dp = downloader.attempt_create_all_lightcurves_dataproduct(
+                clean_up=False
+            )
+            processor = TransitProcessor(all_lightcurves_dp)
+            processor.process()
 
         photometry_cat_dps = DataProduct.objects.filter(
             data_product_type="image_photometry_catalog"
