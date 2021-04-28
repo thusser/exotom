@@ -1,6 +1,5 @@
 import glob, os, tempfile, time
 
-import batman
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,15 +21,13 @@ from local_settings import COORDS_BY_INSTRUMENT
 
 
 class TransitProcessor:
-    def __init__(self, data_product_group: DataProductGroup):
-        self.data_product_group = data_product_group
+    def __init__(self, all_lightcurves_dataproduct: DataProduct):
 
-        self.data_products = data_product_group.dataproduct_set.all()
-        self.check_data_products_validity()
+        self.all_lightcurves_dataproduct = all_lightcurves_dataproduct
+        self.check_all_lightcurves_dataproduct_validity()
 
-        self.first_data_product = self.data_products[0]
-        self.observation_record = self.first_data_product.observation_record
-        self.target: Target = self.first_data_product.target
+        self.observation_record = self.all_lightcurves_dataproduct.observation_record
+        self.target: Target = self.all_lightcurves_dataproduct.target
         self.target_coord = SkyCoord(self.target.ra * u.deg, self.target.dec * u.deg)
         self.earth_location = self.get_earth_location()
 
@@ -48,37 +45,37 @@ class TransitProcessor:
             except (KeyError, Transit.DoesNotExist):
                 self.transit = None
 
-        self.transit_name = data_product_group.name
-        self.light_curve_name = f"{self.transit_name}_light_curve"
+        dp_filename = os.path.splitext(
+            os.path.basename(self.all_lightcurves_dataproduct.data.path)
+        )[0]
+        # remove '_all' and everything after it
+        _all_index = dp_filename.index("_all")
+        self.light_curve_name = dp_filename[:_all_index]
+        print(f"Using light curve name {self.light_curve_name}")
 
         # objects that get created later
         self.best_fit_result = None
-        self.all_light_curves_df = None
         self.best_light_curves_df = None
         self.best_light_curves_dp = None
 
-    def check_data_products_validity(self):
-        if len(self.data_products) == 0:
-            raise ValueError("DataProductGroup contains no dataproducts.")
+    def check_all_lightcurves_dataproduct_validity(self):
+        if (
+            self.all_lightcurves_dataproduct.data_product_type
+            != "transit_all_light_curves"
+        ):
+            raise ValueError(
+                f"all_lightcurves_dataproduct doesnt have type "
+                f"transit_all_light_curves but {self.all_lightcurves_dataproduct.data_product_type}."
+            )
 
-        for dp in self.data_products:
-            try:
-                path = dp.data.path
-                if path is None or path == "":
-                    raise Exception()
-            except:
-                raise ValueError(
-                    f"Dataproduct {dp} does not have well defined DataProduct.data.path"
-                )
-
-        self.check_all_dataproducts_are_photometry_catalogs(self.data_products)
-
-    def check_all_dataproducts_are_photometry_catalogs(self, dps):
-        for dp in dps:
-            if dp.data_product_type != "image_photometry_catalog":
-                raise ValueError(
-                    f"DataGroup contains none 'image_photometry_catalog' DataProducts (due to {dp})."
-                )
+        try:
+            path = self.all_lightcurves_dataproduct.data.path
+            if path is None or path == "":
+                raise Exception()
+        except:
+            raise ValueError(
+                f"all_lightcurves_dataproduct ({self.all_lightcurves_dataproduct}) does not have well defined DataProduct.data.path"
+            )
 
     def get_earth_location(self):
         try:
@@ -108,7 +105,7 @@ class TransitProcessor:
         """
 
         print(
-            f"Transit processing {len(self.data_products)} data products: {self.data_products}"
+            f"Transit processing all lightcurves data product: {self.all_lightcurves_dataproduct}"
         )
 
         self.extract_and_save_lightcurves()
@@ -121,26 +118,20 @@ class TransitProcessor:
 
         best_fit_result: FitResult
         (
-            all_light_curves_df,
             best_light_curve_df,
             best_fit_result,
         ) = self.extract_best_lightcurves_and_fit(all_light_curves_df)
 
         self.best_fit_result = best_fit_result
-        self.all_light_curves_df = all_light_curves_df
         self.best_light_curves_df = best_light_curve_df
 
         self.save_lightcurves_and_fit_report_as_dataproducts(
-            all_light_curves_df, best_light_curve_df, best_fit_result
+            best_light_curve_df, best_fit_result
         )
 
     def extract_all_lightcurves_df(self):
-        image_catalogs: [] = self.load_data_from_dataproduct_list(self.data_products)
-
-        lce = LightCurvesExtractor(image_catalogs, self.target_coord)
-
-        all_light_curves_df = lce.get_target_and_ref_stars_light_curves_df()
-        return all_light_curves_df
+        df = pd.read_csv(self.all_lightcurves_dataproduct.data.path)
+        return df
 
     def extract_best_lightcurves_and_fit(self, all_light_curves_df):
 
@@ -159,16 +150,11 @@ class TransitProcessor:
             best_fit_result,
         ) = transit_lc_extractor.get_best_relative_transit_light_curve_dataframe()
 
-        return all_light_curves_df, best_light_curve_df, best_fit_result
+        return best_light_curve_df, best_fit_result
 
     def save_lightcurves_and_fit_report_as_dataproducts(
-        self, all_light_curves_df, best_light_curve_df, best_fit_result
+        self, best_light_curve_df, best_fit_result
     ):
-        self.save_dataframe_as_dataproduct_and_csv_file(
-            all_light_curves_df,
-            product_id=self.light_curve_name + "_all",
-            data_product_type="transit_all_light_curves",
-        )
         self.best_light_curves_dp = self.save_dataframe_as_dataproduct_and_csv_file(
             best_light_curve_df,
             product_id=self.light_curve_name + "_best",
@@ -184,6 +170,11 @@ class TransitProcessor:
     def save_dataframe_as_dataproduct_and_csv_file(
         self, df, product_id, data_product_type
     ) -> DataProduct:
+        try:
+            DataProduct.objects.get(product_id=product_id).delete()
+        except:
+            pass
+
         dp = DataProduct.objects.create(
             product_id=product_id,
             target=self.target,
@@ -201,6 +192,11 @@ class TransitProcessor:
     def save_fit_report_as_dataproduct_and_txt_file(
         self, fit_report, product_id, data_product_type
     ) -> DataProduct:
+        try:
+            DataProduct.objects.get(product_id=product_id).delete()
+        except:
+            pass
+
         dp = DataProduct.objects.create(
             product_id=product_id,
             target=self.target,
@@ -373,3 +369,105 @@ class TransitProcessor:
             image_catalogs.append(cat)
         print("Load took %.2fs" % (time.time() - start,))
         return image_catalogs, one_image
+
+
+class TransitPhotometryCatalogGroup:
+    def __init__(self, data_product_group: DataProductGroup):
+        self.data_product_group = data_product_group
+
+        self.data_products = data_product_group.dataproduct_set.all()
+        self.check_data_products_validity()
+
+        self.first_data_product = self.data_products[0]
+        self.observation_record = self.first_data_product.observation_record
+        self.target: Target = self.first_data_product.target
+        self.target_coord = SkyCoord(self.target.ra * u.deg, self.target.dec * u.deg)
+
+        self.transit_name = data_product_group.name
+        self.light_curve_name = f"{self.transit_name}_light_curve"
+
+    def check_data_products_validity(self):
+        if len(self.data_products) == 0:
+            raise ValueError("DataProductGroup contains no dataproducts.")
+
+        for dp in self.data_products:
+            try:
+                path = dp.data.path
+                if path is None or path == "":
+                    raise Exception()
+            except:
+                raise ValueError(
+                    f"Dataproduct {dp} does not have well defined DataProduct.data.path"
+                )
+
+        self.check_all_dataproducts_are_photometry_catalogs(self.data_products)
+
+    def check_all_dataproducts_are_photometry_catalogs(self, dps):
+        for dp in dps:
+            if dp.data_product_type != "image_photometry_catalog":
+                raise ValueError(
+                    f"DataGroup contains none 'image_photometry_catalog' DataProducts (due to {dp})."
+                )
+
+    def create_transit_all_lightcurves_dataproduct(self) -> DataProduct:
+        """Processes the data products in the data group. Creates
+        - one of type "transit_all_light_curves" which contains all potential reference star lightcurves that fulfill
+            some basic quality criteria (columns are numbers 0, 1, 2...) and a column "target" for the target star flux.
+
+        :raises ValueError if data_product_group contains no DataProducts or data_product_types
+        other than "photometry_catalog"s.
+        """
+
+        print(
+            f"Transit processing {len(self.data_products)} data products: {self.data_products}"
+        )
+
+        return self.extract_and_save_transit_all_light_curves()
+
+    def extract_and_save_transit_all_light_curves(self):
+
+        self.all_light_curves_df = self.extract_all_lightcurves_df()
+
+        return self.save_all_lightcurves_dataproduct_and_file(self.all_light_curves_df)
+
+    def extract_all_lightcurves_df(self):
+        image_catalogs: [] = self.load_data_from_dataproduct_list(self.data_products)
+
+        lce = LightCurvesExtractor(image_catalogs, self.target_coord)
+        all_light_curves_df = lce.get_target_and_ref_stars_light_curves_df()
+
+        return all_light_curves_df
+
+    @staticmethod
+    def load_data_from_dataproduct_list(dps: [DataProduct], verbose=True):
+        print("Starting data load from dataproduct list")
+        start = time.time()
+        image_catalogs = []
+        files = sorted([dp.data.path for dp in dps])
+        print(f"Found {len(files)} files.")
+        for i, filename in enumerate(sorted(files), 1):
+            if verbose and i % 100 == 0:
+                print("(%d/%d) Loading %s..." % (i, len(files), filename))
+
+            cat = pd.read_csv(filename)
+            image_catalogs.append(cat)
+        print("Load took %.2fs" % (time.time() - start,))
+        return image_catalogs
+
+    def save_all_lightcurves_dataproduct_and_file(
+        self, all_light_curves_df
+    ) -> DataProduct:
+        product_id = self.light_curve_name + "_all"
+        dp = DataProduct.objects.create(
+            product_id=product_id,
+            target=self.target,
+            observation_record=self.observation_record,
+            data_product_type="transit_all_light_curves",
+        )
+        dfile = ContentFile(all_light_curves_df.to_csv())
+        dp.data.save(
+            product_id + ".csv",
+            dfile,
+        )
+        dp.save()
+        return dp
