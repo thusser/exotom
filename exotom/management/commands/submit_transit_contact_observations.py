@@ -4,7 +4,11 @@ from django.core.management.base import BaseCommand
 from tom_observations.models import ObservationRecord
 
 from exotom.settings import FACILITIES, SITES
-from exotom.ofi.iagtransit import IAGTransitForm, IAGTransitSingleContactForm
+from exotom.ofi.iagtransit import (
+    IAGTransitForm,
+    IAGTransitSingleContactForm,
+    IAGTransitFacility,
+)
 from tom_iag.iag import IAGFacility, get_instruments
 from exotom.models import Target, Transit
 
@@ -12,6 +16,8 @@ from exotom.transits import calculate_transits_during_next_n_days
 from exotom.exposure_calculator import calculate_exposure_time
 from astropy.time import Time
 import pytz
+
+from local_settings import MAX_EXPOSURES_PER_REQUEST
 
 
 class Command(BaseCommand):
@@ -71,17 +77,28 @@ def submit_ingresses_egresses_for_transit(
 def submit_transit_single_contact_to_instrument(
     transit: Transit, instrument_type: str, instrument_details: dict, contact: str
 ):
-    print(
-        f"Submitting transit {contact.upper()} {transit} with transit id {transit.id} and target id {transit.target_id}"
-    )
-
     observation_data = get_observation_data(
         transit, instrument_type, instrument_details, contact
     )
+
     form = IAGTransitSingleContactForm(initial=observation_data, data=observation_data)
     form.is_valid()
-    facility = IAGFacility()
-    observation_ids = facility.submit_observation(form.observation_payload())
+    observation_payload = form.observation_payload()
+
+    facility = IAGTransitFacility()
+
+    n_exposures = facility.get_number_of_exposures(observation_payload)
+    if n_exposures > MAX_EXPOSURES_PER_REQUEST:
+        raise Exception(
+            f"{n_exposures} requested which is more than {MAX_EXPOSURES_PER_REQUEST}"
+            f" max allowed per request."
+        )
+
+    print(
+        f"Submitting transit {transit} with transit id {transit.id} and target id {transit.target_id}"
+    )
+
+    observation_ids = facility.submit_observation(observation_payload)
 
     # create observation record
     for observation_id in observation_ids:
@@ -97,7 +114,7 @@ def get_observation_data(
     transit: Transit, instrument_type: str, instrument_details: dict, contact: str
 ) -> dict:
     magnitude = transit.target.targetextra_set.get(key="Mag (TESS)").float_value
-    exposure_time = calculate_exposure_time(magnitude)
+    exposure_time = calculate_exposure_time(magnitude, instrument_type)
 
     data = {
         "name": f"{transit.target.name} #{transit.number} {contact}",

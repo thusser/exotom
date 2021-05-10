@@ -1,0 +1,30 @@
+{% extends 'tom_common/base.html' %}
+{% load static targets_extras observation_extras dataproduct_extras tom_common_extras whats_new %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h2>What's New</h2>
+    <br/>
+    {% whats_new 20 %}
+  </div>
+  <div class="col-md-4">
+    <h2 class="text-center">Welcome to ExoTOM</h2>
+    <p class="text-center"><img src="{% static 'tom_common/img/logo-color_with_planet.png' %}" width=350 class="img-fluid mx-auto"></p>
+    <div class="text-center">Made with the <a href="https://tom-toolkit.readthedocs.io/en/stable/" title="TOM Toolkit home page">TOM Toolkit</a>.</div>
+    <br/>
+    <div class="card">
+      <div class="card-header">
+        Latest Comments
+      </div>
+      {% recent_comments %}
+    </div>
+    <br/>
+    <div class="card">
+      <div class="card-header">
+        Latest Targets
+      </div>
+      {% recent_targets %}
+  </div>
+</div>
+{% endblock %}

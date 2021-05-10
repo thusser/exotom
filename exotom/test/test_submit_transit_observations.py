@@ -1,3 +1,8 @@
+import datetime
+
+from astroplan import Observer
+from astropy import units as u
+from astropy.coordinates import SkyCoord, AltAz
 from django.test import TestCase
 from unittest.mock import MagicMock, call
 from tom_iag.iag import IAGFacility, IAGBaseForm
@@ -65,7 +70,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10026.676211999995,
+                                        "repeat_duration": 10942.170024000003,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -79,7 +84,7 @@ class TestCommand(TestCase):
                                         "instrument_configs": [
                                             {
                                                 "exposure_count": 1,
-                                                "exposure_time": 9.629461090307885,
+                                                "exposure_time": 3.6723439653643895,
                                                 "mode": "sbig8300_1x1",
                                                 "optical_elements": {
                                                     "filter": "no_filter"
@@ -93,8 +98,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T09:41:14.584",
-                                        "end": "2021-01-19T12:40:21.260",
+                                        "start": "2021-01-19T09:33:36.837",
+                                        "end": "2021-01-19T12:47:59.007",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -117,7 +122,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 10037.550435999981,
+                                        "repeat_duration": 10963.918472,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -131,7 +136,7 @@ class TestCommand(TestCase):
                                         "instrument_configs": [
                                             {
                                                 "exposure_count": 1,
-                                                "exposure_time": 9.629461090307885,
+                                                "exposure_time": 3.6723439653643895,
                                                 "mode": "sbig8300_1x1",
                                                 "optical_elements": {
                                                     "filter": "no_filter"
@@ -145,8 +150,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-23T09:15:01.294",
-                                        "end": "2021-01-23T12:14:18.844",
+                                        "start": "2021-01-23T09:07:18.110",
+                                        "end": "2021-01-23T12:22:02.028",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -296,7 +301,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10026.676211999995,
+                                    "repeat_duration": 10942.170024000003,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -310,7 +315,7 @@ class TestCommand(TestCase):
                                     "instrument_configs": [
                                         {
                                             "exposure_count": 1,
-                                            "exposure_time": 9.629461090307885,
+                                            "exposure_time": 3.6723439653643895,
                                             "mode": "sbig8300_1x1",
                                             "optical_elements": {"filter": "no_filter"},
                                         }
@@ -322,8 +327,8 @@ class TestCommand(TestCase):
                             ],
                             "windows": [
                                 {
-                                    "start": "2021-01-19T09:41:14.584",
-                                    "end": "2021-01-19T12:40:21.260",
+                                    "start": "2021-01-19T09:33:36.837",
+                                    "end": "2021-01-19T12:47:59.007",
                                 }
                             ],
                             "location": {"telescope_class": "1m2"},
@@ -386,7 +391,7 @@ class TestCommand(TestCase):
                             "configurations": [
                                 {
                                     "type": "REPEAT_EXPOSE",
-                                    "repeat_duration": 10026.676211999995,
+                                    "repeat_duration": 10942.170024000003,
                                     "instrument_type": "1M2 SBIG8300",
                                     "target": {
                                         "name": "HAT-P-36b",
@@ -400,7 +405,7 @@ class TestCommand(TestCase):
                                     "instrument_configs": [
                                         {
                                             "exposure_count": 1,
-                                            "exposure_time": 9.629461090307885,
+                                            "exposure_time": 3.6723439653643895,
                                             "mode": "sbig8300_1x1",
                                             "optical_elements": {"filter": "no_filter"},
                                         }
@@ -412,8 +417,8 @@ class TestCommand(TestCase):
                             ],
                             "windows": [
                                 {
-                                    "start": "2021-01-19T09:41:14.584",
-                                    "end": "2021-01-19T12:40:21.260",
+                                    "start": "2021-01-19T09:33:36.837",
+                                    "end": "2021-01-19T12:47:59.007",
                                 }
                             ],
                             "location": {"telescope_class": "1m2"},
@@ -427,3 +432,66 @@ class TestCommand(TestCase):
 
         call_arg_list = IAGFacility.submit_observation.call_args_list
         self.assertEqual(call_arg_list, expected_call_args_list)
+
+    # def test_n_exposures_per_request_limit(self):
+    #
+    #     target1_dict = {
+    #         "name": "HAT-P-36b",
+    #         "type": "SIDEREAL",
+    #         "ra": 0,
+    #         "dec": 90,
+    #     }
+    #
+    #     today_midnight = datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())
+    #     tomorrow_11_pm = today_midnight + datetime.timedelta(days=1, hours=23)
+    #     test_now = Time(tomorrow_11_pm)
+    #
+    #     target1_extra_fields = {
+    #         "Priority Proposal": True,
+    #         "Mag (TESS)": 8,
+    #         "Period (days)": 1.,
+    #         "Period (days) err": 3.1e-05,  # <-- higher value to increase obs window size
+    #         "Depth (mmag)": 19.323865,
+    #         "Depth (mmag) err": 0.130853,
+    #         "Duration (hours)": 2,
+    #         "Duration (hours) err": 0.021004,
+    #         "Epoch (BJD)": Time(today_midnight).jd, # 2458899.476842
+    #         "Epoch (BJD) err": 1e-6,
+    #     }
+    #     print(target1_extra_fields)
+    #     self.target1 = Target(**target1_dict)
+    #     self.target1.save(extras=target1_extra_fields)
+    #
+    #     expected_call_args_list = []
+    #
+    #     IAGBaseForm.proposal_choices = MagicMock(
+    #         return_value=[
+    #             ("exo", "Exoplanets (exo)"),
+    #             ("exofiller", "Low priority exoplanet obervations"),
+    #         ]
+    #     )
+    #
+    #     IAGFacility.submit_observation.reset_mock()
+    #     ObservationRecord.objects.all().delete()
+    #
+    #     Time.now = MagicMock(return_value=test_now)
+    #     submit_all_transits()
+    #
+    #     self.assertEqual(
+    #         IAGFacility.submit_observation.call_args_list,
+    #         expected_call_args_list,
+    #         f"IAGFacility.submit_observation not called with expected args."
+    #         f" Called with \n{IAGFacility.submit_observation.call_args_list}\n instead of expected\n {expected_call_args_list}.",
+    #     )
+    #
+    #     n_expected_obs_records = 1 if expected_call_args_list != [] else 0
+    #     obs_records = ObservationRecord.objects.all()
+    #     self.assertEqual(
+    #         len(obs_records),
+    #         n_expected_obs_records,
+    #         f"obs_records does not have length {n_expected_obs_records} (obs_records = {obs_records}).",
+    #     )
+    #
+    #     if n_expected_obs_records != 0:
+    #         obs_record = ObservationRecord.objects.all()[0]
+    #         self.assertEqual(obs_record.target, self.target1)

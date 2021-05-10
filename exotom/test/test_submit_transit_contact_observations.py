@@ -54,7 +54,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 1995.4938119999879,
+                                        "repeat_duration": 2310.987624000003,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -68,7 +68,7 @@ class TestCommand(TestCase):
                                         "instrument_configs": [
                                             {
                                                 "exposure_count": 1,
-                                                "exposure_time": 9.629461090307885,
+                                                "exposure_time": 3.6723439653643895,
                                                 "mode": "sbig8300_1x1",
                                                 "optical_elements": {
                                                     "filter": "no_filter"
@@ -82,8 +82,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T09:41:14.584",
-                                        "end": "2021-01-19T10:26:30.078",
+                                        "start": "2021-01-19T09:38:36.837",
+                                        "end": "2021-01-19T10:29:07.825",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},
@@ -103,7 +103,7 @@ class TestCommand(TestCase):
                                 "configurations": [
                                     {
                                         "type": "REPEAT_EXPOSE",
-                                        "repeat_duration": 1995.4938120000022,
+                                        "repeat_duration": 2310.9876239999985,
                                         "instrument_type": "1M2 SBIG8300",
                                         "target": {
                                             "name": "HAT-P-36b",
@@ -117,7 +117,7 @@ class TestCommand(TestCase):
                                         "instrument_configs": [
                                             {
                                                 "exposure_count": 1,
-                                                "exposure_time": 9.629461090307885,
+                                                "exposure_time": 3.6723439653643895,
                                                 "mode": "sbig8300_1x1",
                                                 "optical_elements": {
                                                     "filter": "no_filter"
@@ -131,8 +131,8 @@ class TestCommand(TestCase):
                                 ],
                                 "windows": [
                                     {
-                                        "start": "2021-01-19T11:55:05.766",
-                                        "end": "2021-01-19T12:40:21.260",
+                                        "start": "2021-01-19T11:52:28.019",
+                                        "end": "2021-01-19T12:42:59.007",
                                     }
                                 ],
                                 "location": {"telescope_class": "1m2"},

@@ -1,13 +1,13 @@
 import numpy as np
-from astropy.coordinates import SkyCoord, AltAz, EarthLocation
+from astropy.coordinates import SkyCoord, EarthLocation
 import astropy.units as u
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import copy, pprint
+import copy
 from typing import Union
 
-from batman import TransitParams
+from tom_targets.models import TargetExtra
 
 from exotom.models import Transit
 from exotom.tess_transit_fit import TessTransitFit, FitResult
@@ -18,133 +18,152 @@ MAX_SEPARATION_TO_CATALOG_IN_DEG = 5 / 3600
 class TransitLightCurveExtractor:
     def __init__(
         self,
-        image_catalogs: [],
+        all_light_curves_df: pd.DataFrame,
         target_coord: SkyCoord,
+        target_extras: [TargetExtra],
         transit: Transit,
-        one_image_for_plot: np.ndarray = None,
-        max_allowed_pixel_value: float = 5e4,
-        max_allowed_source_ellipticity: float = 0.4,
-        min_allowed_source_fwhm: float = 2.5,
+        earth_location: EarthLocation,
     ):
 
+        self.all_light_curves_df = all_light_curves_df
         self.target_coord = target_coord
+        self.target_extras: [TargetExtra] = target_extras
         self.transit = transit  # can be None if 'transit_id' had not been written to ObservationRecord.parameters
-        self.lce = LightCurvesExtractor(
-            image_catalogs,
-            target_coord,
-            one_image_for_plot,
-            max_allowed_pixel_value,
-            max_allowed_source_ellipticity,
-            min_allowed_source_fwhm,
-        )
-        self.light_curves_df: Union[pd.DataFrame, None] = None
-        # self.filtered_light_curves_with_target_rel_light_curve_df: Union[pd.DataFrame, None] = None
-
-    def get_all_light_curves_dataframe(
-        self,
-        flux_column_name: str = "flux",
-        use_only_n_brightest_ref_sources: int = None,
-        force_recalculate: bool = False,
-    ):
-        if self.light_curves_df is None or force_recalculate:
-            self.light_curves_df = self.lce.get_target_and_ref_stars_light_curves_df(
-                flux_column_name, use_only_n_brightest_ref_sources
-            )
-        return self.light_curves_df
+        self.earth_location = earth_location
 
     def get_best_relative_transit_light_curve_dataframe(
         self,
-    ) -> (pd.DataFrame, TransitParams):
+    ) -> (pd.DataFrame, FitResult):
         """Filter out ref stars that are noisy from light_curves_df.
         :returns pd.DataFrame that contains the lightcurves of good reference stars and target
         and relative light curve of target
         """
-        light_curves_df = copy.deepcopy(self.get_all_light_curves_dataframe())
+        light_curves_df = copy.deepcopy(self.all_light_curves_df)
 
         filtered_light_curves = self.filter_noisy_light_curves(light_curves_df)
 
-        filtered_light_curves_with_target_rel_light_curve_df = filtered_light_curves
-        filtered_light_curves_with_target_rel_light_curve_df[
-            "target_rel"
-        ] = filtered_light_curves["target"] / filtered_light_curves[
-            filter(lambda col: type(col) == int, filtered_light_curves.columns)
-        ].sum(
-            axis="columns"
-        )
-
+        # good_lcs_df, fit_result = self.drop_bad_ref_sources_by_fit_chi_squared(filtered_light_curves)
         fit_result: Union[FitResult, None] = None
         if self.transit is not None:
             print("Doing fit of best relative lightcurve")
-            fit_result = self.make_best_fit(
-                filtered_light_curves_with_target_rel_light_curve_df
-            )
+            good_lcs_df, fit_result = self.make_best_fit(filtered_light_curves)
+        else:
+            print("Transit not given, so not doing fit.")
+            good_lcs_df = filtered_light_curves
+
+        lcs_with_target_rel_lc_df = (
+            self.create_or_update_target_relative_lightcurve_column(good_lcs_df)
+        )
 
         print(
             f"Columns of final best relative transit light curve dataframe: "
-            f"{list(filtered_light_curves_with_target_rel_light_curve_df.columns)}"
+            f"{list(lcs_with_target_rel_lc_df.columns)}"
         )
-        return filtered_light_curves_with_target_rel_light_curve_df, fit_result
+        return lcs_with_target_rel_lc_df, fit_result
 
-    def make_best_fit(self, best_light_curves_df):
-        transit_fit = TessTransitFit(best_light_curves_df, self.transit)
-        fit_result = transit_fit.make_simplest_fit()
-        return fit_result
-
-    def filter_noisy_light_curves(
-        self, light_curves_df, max_detrended_normed_std: float = 0.01
-    ):
-        """Filters out light curves of ref sources that are noisy. For that it detrends the normed light curves
-        with a linear function of the airmass. Ref sources with detrended normed light curves with standard
-        deviation > max_detrended_normed_std are removed.
+    def filter_noisy_light_curves(self, light_curves_df, kappa: float = 0.1):
+        """Filters out light curves of ref sources that are noisy. For that it calculates the normed relative light curve
+        of the ref source and target and does a kappa-sigma clipping on the stddev of that.
 
         :param cmp_light_curves:
         :param max_detrended_normed_std:
         :return: filtered light curves
         """
-        # times = Time(light_curves_df["time"], format="jd")
-        # times, airmass = self.get_airmass(times)
-        # airmass_func = interpolate.interp1d(times, airmass, kind="linear")
 
-        ref_star_columns = [col for col in light_curves_df.columns if type(col) == int]
-        target_lc_normed = light_curves_df["target"] / light_curves_df["target"].mean()
-        relative_light_curves_stds = {}
-        for col in ref_star_columns:
-            cmp_lc = light_curves_df[col]
-            cmp_lc_normed = cmp_lc / cmp_lc.mean()
-            # print(cmp_lc.mean(), cmp_lc, cmp_lc_normed, )
-            # def fit_func(time, m, b):
-            #     return m * airmass_func(time) + b
-            #
-            # popt, pcov = curve_fit(fit_func, times, cmp_lc_normed, p0=[-0.1, 1])
+        ref_star_columns = self.get_ref_star_columns(light_curves_df.columns)
+        # use sum of all reference lightcurves to remove trend and create relative reference star light curve
+        sum_of_reference_lightcurves = light_curves_df[ref_star_columns].sum(
+            axis="columns"
+        )
+        relative_light_curves_stddevs = {}
+        for column in ref_star_columns:
+            comparison_lightcurve = light_curves_df[column]
+            normed_comp_lightcurve = (
+                comparison_lightcurve / comparison_lightcurve.mean()
+            )
 
-            cmp_rel_lc = target_lc_normed / cmp_lc_normed
+            relative_comp_lightcurve = (
+                sum_of_reference_lightcurves / normed_comp_lightcurve
+            )
 
-            rel_lc_std = cmp_rel_lc.std()
+            relative_lightcurve_stddev = relative_comp_lightcurve.std()
 
-            relative_light_curves_stds[col] = rel_lc_std
+            relative_light_curves_stddevs[column] = relative_lightcurve_stddev
 
-        # kappa sigma clip on the standard deviation of relative lightcurves
-        kappa = 0.5
-        avg = np.mean(list(relative_light_curves_stds.values()))
-        std = np.std(list(relative_light_curves_stds.values()))
+        # kappa sigma clip on the standard deviations of relative lightcurves
+        avg = np.mean(list(relative_light_curves_stddevs.values()))
+        std = np.std(list(relative_light_curves_stddevs.values()))
 
         remove_columns = [
             col
-            for col, col_std in relative_light_curves_stds.items()
+            for col, col_std in relative_light_curves_stddevs.items()
             if col_std > avg + kappa * std
         ]
         print(
-            f"Removing ref stars {remove_columns} because relative_light_curves_stds > avg + {kappa} * sigma."
+            f"Removing ref stars {remove_columns} because relative_light_curves_stddevs > avg + {kappa} * sigma."
         )
         light_curves_df.drop(columns=remove_columns, inplace=True)
         return light_curves_df
 
-    def get_airmass(self, times):
-        goe = EarthLocation(lat=51.561 * u.deg, lon=9.944 * u.deg, height=390 * u.m)
-        frame = AltAz(obstime=times, location=goe)
-        target_altaz = self.target_coord.transform_to(frame)
-        airmass = target_altaz.secz
-        return times.plot_date, airmass
+    def get_ref_star_columns(self, columns):
+        return list(filter(lambda col: str(col).isdigit() or type(col) == int, columns))
+
+    def make_best_fit(self, light_curves_df):
+        transit_fit = TessTransitFit(
+            light_curves_df, self.transit, self.target_extras, self.earth_location
+        )
+        fit_result = transit_fit.make_simplest_fit_and_report()
+        return light_curves_df, fit_result
+
+    def drop_bad_ref_sources_by_fit_chi_squared(self, lightcurves: pd.DataFrame):
+
+        print("Starting dropping bad ref sources")
+        best_lcs_df = copy.deepcopy(lightcurves)
+        ref_star_columns = self.get_ref_star_columns(best_lcs_df.columns)
+
+        fitter = TessTransitFit(
+            best_lcs_df, self.transit, self.target_extras, self.earth_location
+        )
+        initial_fit_result = fitter.make_simplest_fit_and_report()
+
+        best_fit_result = initial_fit_result
+        print(initial_fit_result.params.__dict__)
+        print(initial_fit_result.chi_squared)
+
+        drop_columns = []
+        while True:
+            for drop_column in ref_star_columns:  # reversed(ref_star_columns):
+                df_with_column_dropped = best_lcs_df.drop(columns=drop_column)
+                new_fit_result = fitter.make_simplest_fit_and_report(
+                    df_with_column_dropped
+                )
+                # print(new_fit_result.params.__dict__)
+                print(new_fit_result.chi_squared)
+
+                if new_fit_result.chi_squared < best_fit_result.chi_squared:
+                    ref_star_columns.remove(drop_column)
+                    # drop improved fit
+                    drop_columns.append(drop_column)
+                    print(f"YES Dropping column {drop_column}")
+                    best_lcs_df = df_with_column_dropped
+                    best_fit_result = new_fit_result
+                    break
+                else:
+                    print(f"NOT Dropping column {drop_column}")
+            else:  # nobreak
+                break
+
+        print(f"Dropped columns {drop_columns}")
+
+        return best_lcs_df, best_fit_result
+
+    def create_or_update_target_relative_lightcurve_column(self, filtered_light_curves):
+        lcs_with_target_rel_lc_df = filtered_light_curves
+        ref_star_columns = self.get_ref_star_columns(filtered_light_curves.columns)
+        lcs_with_target_rel_lc_df["target_rel"] = filtered_light_curves[
+            "target"
+        ] / filtered_light_curves[ref_star_columns].sum(axis="columns")
+        return lcs_with_target_rel_lc_df
 
 
 class LightCurvesExtractor:
@@ -404,10 +423,14 @@ class LightCurvesExtractor:
 
         required_columns = ["ra", "dec", "time", "flux"]
         filtered_catalogs = []
-        for cat in image_catalogs:
+        for icat, cat in enumerate(image_catalogs):
             for required_column in required_columns:
                 if required_column not in cat.columns:
+                    print(
+                        f"Filtering out frame {icat}/{len(image_catalogs)} because column {required_column} is missing."
+                    )
                     break
             else:  # nobreak
                 filtered_catalogs.append(cat)
+
         return filtered_catalogs

@@ -1,5 +1,5 @@
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, Mock
 
 import pandas as pd
 from astropy.time import Time
@@ -12,6 +12,8 @@ from tom_observations.models import ObservationRecord
 
 from exotom import transit_processor
 from exotom.models import Target, Transit
+from exotom import observation_downloader
+from exotom.transit_processor import TransitProcessor
 from exotom.transits import calculate_transits_during_next_n_days
 
 
@@ -21,8 +23,8 @@ class Test(TestCase):
 
     def tearDown(self) -> None:
         print("Deleting all data product files")
-        # for dp in DataProduct.objects.all():
-        #     os.remove(dp.data.path)
+        for dp in DataProduct.objects.all():
+            os.remove(dp.data.path)
 
     def test_simple_processing_without_fit(self):
         # no transit object is created, so no fit is done
@@ -39,9 +41,12 @@ class Test(TestCase):
             "ra": 340.08462499999996,
             "dec": 69.50373055555555,
         }
-
+        target1_extra_fields = {
+            "Epoch (BJD) err": 0.000252,  # made up value
+            "Period (days) err": 1e-6,  # made up value
+        }
         target1 = Target(**target1_dict)
-        target1.save()  # extras=target1_extra_fields)
+        target1.save(extras=target1_extra_fields)
 
         obs_id = 9876
         transit_number = 1234
@@ -68,9 +73,17 @@ class Test(TestCase):
             dp.save()
             print(dp.data)
 
-        transit_processorr = transit_processor.TransitProcessor(transit_dp_group)
-
-        transit_processorr.process()
+        with patch.object(
+            observation_downloader.TransitObservationDownloader,
+            "make_photometry_catalog_data_product_group",
+            new=Mock(return_value=transit_dp_group),
+        ) as make_dp_group:
+            downloader = observation_downloader.TransitObservationDownloader(obs_record)
+            all_lightcurves_dp = downloader.attempt_create_all_lightcurves_dataproduct(
+                clean_up=False
+            )
+            processor = TransitProcessor(all_lightcurves_dp)
+            processor.process()
 
         photometry_cat_dps = DataProduct.objects.filter(
             data_product_type="image_photometry_catalog"
@@ -109,8 +122,10 @@ class Test(TestCase):
             "Priority Proposal": False,
             "Mag (TESS)": 11.6281,
             "Epoch (BJD)": 2458902.718492,
+            "Epoch (BJD) err": 0.000252,  # made up value,
             "Duration (hours)": 3.588807,
             "Period (days)": 4.617208,
+            "Period (days) err": 1e-6,  # made up value
             "Depth (mmag)": 12.207647,
             "Planet Radius (R_Earth)": 12.041519,
             "Stellar Radius (R_Sun)": 1.1136,
@@ -149,9 +164,17 @@ class Test(TestCase):
             dp.save()
             print(dp.data)
 
-        transit_processorr = transit_processor.TransitProcessor(transit_dp_group)
-
-        transit_processorr.process()
+        with patch.object(
+            observation_downloader.TransitObservationDownloader,
+            "make_photometry_catalog_data_product_group",
+            new=Mock(return_value=transit_dp_group),
+        ) as make_dp_group:
+            downloader = observation_downloader.TransitObservationDownloader(obs_record)
+            all_lightcurves_dp = downloader.attempt_create_all_lightcurves_dataproduct(
+                clean_up=False
+            )
+            processor = TransitProcessor(all_lightcurves_dp)
+            processor.process()
 
         photometry_cat_dps = DataProduct.objects.filter(
             data_product_type="image_photometry_catalog"

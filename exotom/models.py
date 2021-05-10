@@ -1,9 +1,17 @@
 import logging
+
+from astropy.time import Time
+from astropy import units as u
 from django.db import models
 from tom_targets.models import Target
 
 from datetime import timedelta
 
+from local_settings import (
+    OBSERVE_N_SIGMA_AROUND_TRANSIT,
+    BASELINE_LENGTH_FOR_WHOLE_TRANSIT,
+    BASELINE_LENGTH_FOR_TRANSIT_CONTACT,
+)
 
 log = logging.getLogger(__name__)
 
@@ -24,29 +32,29 @@ class Transit(models.Model):
             + (self.number * self.target.extra_fields["Period (days) err"]) ** 2
         ) ** 0.5
 
-    def start_earliest(self):
+    def start_earliest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.start - err
+        return self.start - err * n_sigma
 
-    def start_latest(self):
+    def start_latest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.start + err
+        return self.start + err * n_sigma
 
-    def mid_earliest(self):
+    def mid_earliest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.mid - err
+        return self.mid - err * n_sigma
 
-    def mid_latest(self):
+    def mid_latest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.mid + err
+        return self.mid + err * n_sigma
 
-    def end_earliest(self):
+    def end_earliest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.end - err
+        return self.end - err * n_sigma
 
-    def end_latest(self):
+    def end_latest(self, n_sigma: float = 1):
         err = timedelta(days=self.uncertainty_in_days())
-        return self.end + err
+        return self.end + err * n_sigma
 
     @property
     def facilities(self):
@@ -139,6 +147,35 @@ class Transit(models.Model):
 
     def __str__(self):
         return f"Target {self.target}, transit number {self.number}, start, mid, end {self.start, self.mid, self.end}"
+
+    def get_observing_window(self) -> (Time, Time):
+        n_sigma = OBSERVE_N_SIGMA_AROUND_TRANSIT
+        baseline = BASELINE_LENGTH_FOR_WHOLE_TRANSIT * u.min
+        start = Time(self.start_earliest(n_sigma=n_sigma)) - baseline
+        end = Time(self.end_latest(n_sigma=n_sigma)) + baseline
+        return start, end
+
+    def get_ingress_observing_window(self) -> (Time, Time):
+        n_sigma = OBSERVE_N_SIGMA_AROUND_TRANSIT
+        baseline = BASELINE_LENGTH_FOR_TRANSIT_CONTACT * u.min
+        start = Time(self.start_earliest(n_sigma=n_sigma)) - baseline
+        end = Time(self.start_latest(n_sigma=n_sigma)) + baseline
+        return start, end
+
+    def get_egress_observing_window(self) -> (Time, Time):
+        n_sigma = OBSERVE_N_SIGMA_AROUND_TRANSIT
+        baseline = BASELINE_LENGTH_FOR_TRANSIT_CONTACT * u.min
+        start = Time(self.end_earliest(n_sigma=n_sigma)) - baseline
+        end = Time(self.end_latest(n_sigma=n_sigma)) + baseline
+        return start, end
+
+    def get_observing_margin_in_mins(self) -> float:
+        transit_time_error_in_mins = self.uncertainty_in_days() * 24 * 60
+        margin = (
+            transit_time_error_in_mins * OBSERVE_N_SIGMA_AROUND_TRANSIT
+            + BASELINE_LENGTH_FOR_WHOLE_TRANSIT
+        )
+        return margin
 
 
 class TransitObservationDetails(models.Model):

@@ -25,7 +25,7 @@ class Test(TestCase):
             "Duration (hours)": 2.230884,
             "Duration (hours) err": 0.021004,
             "Epoch (BJD)": 2458899.476842,
-            "Epoch (BJD) err": 0.000252,
+            "Epoch (BJD) err": 0.01,  # fake high number to test observability check
             "Mag (TESS)": 11.6281,
             "Period (days)": 1.327352,
             "Period (days) err": 2.1e-05,
@@ -90,18 +90,18 @@ class Test(TestCase):
         ]
 
         expected_details = [
-            {"site": "Sutherland", "observable": False},
-            {"site": "McDonald", "observable": True},
-            {"site": "Göttingen", "observable": False},
-            {"site": "Sutherland", "observable": False},
-            {"site": "McDonald", "observable": False},
-            {"site": "Göttingen", "observable": False},
-            {"site": "Sutherland", "observable": False},
-            {"site": "McDonald", "observable": False},
-            {"site": "Göttingen", "observable": True},
-            {"site": "Sutherland", "observable": False},
-            {"site": "McDonald", "observable": True},
-            {"site": "Göttingen", "observable": False},
+            {"site": "Sutherland", "visible": False, "observable": False},
+            {"site": "McDonald", "visible": True, "observable": False},
+            {"site": "Göttingen", "visible": False, "observable": False},
+            {"site": "Sutherland", "visible": False, "observable": False},
+            {"site": "McDonald", "visible": False, "observable": False},
+            {"site": "Göttingen", "visible": False, "observable": False},
+            {"site": "Sutherland", "visible": False, "observable": False},
+            {"site": "McDonald", "visible": False, "observable": False},
+            {"site": "Göttingen", "visible": True, "observable": True},
+            {"site": "Sutherland", "visible": False, "observable": False},
+            {"site": "McDonald", "visible": True, "observable": True},
+            {"site": "Göttingen", "visible": False, "observable": False},
         ]
 
         transits_before = Transit.objects.all()
@@ -134,10 +134,20 @@ class Test(TestCase):
                 self.assertEqual(transit.end, exp_transit["end"])
 
         transit_observation_details = TransitObservationDetails.objects.all()
-        for transit_observation_detail, exp_details in zip(
-            transit_observation_details, expected_details
+
+        # for t in transit_observation_details:
+        #     print(
+        #         f"{{'site': '{t.site}', 'visible': {t.visible}, 'observable': {t.observable}}},"
+        #     )
+
+        for i, (transit_observation_detail, exp_details) in enumerate(
+            zip(transit_observation_details, expected_details)
         ):
-            self.assertEqual(transit_observation_detail.site, exp_details["site"])
-            self.assertEqual(
-                transit_observation_detail.visible, exp_details["observable"]
-            )
+            with self.subTest(i=i):
+                self.assertEqual(transit_observation_detail.site, exp_details["site"])
+                self.assertEqual(
+                    transit_observation_detail.visible, exp_details["visible"]
+                )
+                self.assertEqual(
+                    transit_observation_detail.observable, exp_details["observable"]
+                )

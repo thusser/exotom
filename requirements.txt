@@ -1,6 +1,7 @@
-numpy >= 1.20.1
+numpy == 1.20.1
 wheel
-tomtoolkit == 2.5.1
+tomtoolkit == 2.6.0
+batman-package
 pandas
 gunicorn
 celery
@@ -9,4 +10,3 @@ django-celery-beat
 redis
 pre-commit
 matplotlib
-batman-package

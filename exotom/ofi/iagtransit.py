@@ -1,7 +1,9 @@
+import requests
 from astropy.time import Time
 from crispy_forms.layout import Div, Layout
 from django import forms
 from dateutil.parser import parse
+from tom_common.exceptions import ImproperCredentialsException
 from tom_targets.models import Target, TargetExtra
 from django.conf import settings
 import astropy.units as u
@@ -32,6 +34,12 @@ except (AttributeError, KeyError):
         "proposal": "exo",
         "max_airmass": 1.5,
     }
+
+from local_settings import (
+    OBSERVE_N_SIGMA_AROUND_TRANSIT,
+    BASELINE_LENGTH_FOR_WHOLE_TRANSIT,
+    BASELINE_LENGTH_FOR_TRANSIT_CONTACT,
+)
 
 
 class IAGTransitForm(IAGImagingObservationForm):
@@ -123,9 +131,8 @@ class IAGTransitForm(IAGImagingObservationForm):
             target=target, number=self.cleaned_data["transit"]
         )
 
-        # calculate start, end and duration
-        start = Time(transit.start_earliest()) - 15 * u.min
-        end = Time(transit.end_latest()) + 15 * u.min
+        # get start, end and duration
+        start, end = transit.get_observing_window()
         duration = end - start
 
         # return it
@@ -295,15 +302,16 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
 
         # calculate start, end and duration
         if contact == "INGRESS":
-            start = Time(transit.start_earliest()) - 15 * u.min
-            end = Time(transit.start_latest()) + 15 * u.min
-            duration = end - start
+            start, end = transit.get_ingress_observing_window()
         elif contact == "EGRESS":
-            start = Time(transit.end_earliest()) - 15 * u.min
-            end = Time(transit.end_latest()) + 15 * u.min
-            duration = end - start
+            start, end = transit.get_egress_observing_window()
+        else:
+            raise Exception(
+                f"Improper contact string '{contact}' given. Only 'INGRESS/'EGRESS' allowed."
+            )
 
-        # return it
+        duration = end - start
+
         return {"start": start.isot, "end": end.isot}, duration
 
     def _build_instrument_config(self):
@@ -358,6 +366,9 @@ class IAGTransitSingleContactForm(IAGImagingObservationForm):
         return payload
 
 
+PORTAL_URL = settings.FACILITIES["IAG"]["portal_url"]
+
+
 class IAGTransitFacility(IAGFacility):
     """
     The ``LCOFacility`` is the interface to the Las Cumbres Observatory Observation Portal. For information regarding
@@ -372,3 +383,42 @@ class IAGTransitFacility(IAGFacility):
             return self.observation_forms[observation_type]
         except KeyError:
             return IAGTransitForm
+
+    def get_number_of_exposures(self, observation_payload):
+        response = make_request(
+            "POST",
+            PORTAL_URL + "/api/requestgroups/validate/",
+            json=observation_payload,
+            headers=self._portal_headers(),
+        )
+        response_json = response.json()
+
+        if "errors" in response_json and response_json["errors"] != {}:
+            if response_json["errors"] == {
+                "requests": [
+                    {"windows": [{"end": ["Window end time must be in the future"]}]}
+                ]
+            } or response_json["errors"] == {
+                "requests": [
+                    {"windows": [{"start": ["Window end time must be in the future"]}]}
+                ]
+            }:
+                return -1
+            else:
+                raise Exception(response_json["errors"])
+
+        total_duration = response_json["request_durations"]["requests"][0]["duration"]
+        exposure_plus_readout = response_json["request_durations"]["requests"][0][
+            "configurations"
+        ][0]["instrument_configs"][0]["duration"]
+
+        n_exposures = total_duration / exposure_plus_readout
+        return n_exposures
+
+
+def make_request(*args, **kwargs):
+    response = requests.request(*args, **kwargs)
+    if 400 <= response.status_code < 500:
+        raise ImproperCredentialsException("IAG: " + str(response.content))
+    response.raise_for_status()
+    return response

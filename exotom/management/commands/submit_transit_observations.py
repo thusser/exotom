@@ -2,8 +2,8 @@ import traceback
 
 from django.core.management.base import BaseCommand
 from tom_observations.models import ObservationRecord
-from exotom.settings import FACILITIES, SITES
-from exotom.ofi.iagtransit import IAGTransitForm
+from exotom.settings import FACILITIES, SITES, MAX_EXPOSURES_PER_REQUEST
+from exotom.ofi.iagtransit import IAGTransitForm, IAGTransitFacility
 from tom_iag.iag import IAGFacility, get_instruments
 from exotom.models import Target, Transit
 
@@ -66,17 +66,28 @@ def submit_all_transits(submit_only_n_transits: int = -1):
 def submit_transit_to_instrument(
     transit: Transit, instrument_type: str, instrument_details: dict
 ):
+    observation_data = get_observation_data(
+        transit, instrument_type, instrument_details
+    )
+
+    form = IAGTransitForm(initial=observation_data, data=observation_data)
+    form.is_valid()
+    observation_payload = form.observation_payload()
+
+    facility = IAGTransitFacility()
+
+    n_exposures = facility.get_number_of_exposures(observation_payload)
+    if n_exposures > MAX_EXPOSURES_PER_REQUEST:
+        raise Exception(
+            f"{n_exposures} requested which is more than {MAX_EXPOSURES_PER_REQUEST}"
+            f" max allowed per request."
+        )
+
     print(
         f"Submitting transit {transit} with transit id {transit.id} and target id {transit.target_id}"
     )
 
-    observation_data = get_observation_data(
-        transit, instrument_type, instrument_details
-    )
-    form = IAGTransitForm(initial=observation_data, data=observation_data)
-    form.is_valid()
-    facility = IAGFacility()
-    observation_ids = facility.submit_observation(form.observation_payload())
+    observation_ids = facility.submit_observation(observation_payload)
 
     # create observation record
     for observation_id in observation_ids:
@@ -92,7 +103,7 @@ def get_observation_data(
     transit: Transit, instrument_type: str, instrument_details: dict
 ) -> dict:
     magnitude = transit.target.targetextra_set.get(key="Mag (TESS)").float_value
-    exposure_time = calculate_exposure_time(magnitude)
+    exposure_time = calculate_exposure_time(magnitude, instrument_type)
 
     data = {
         "name": f"{transit.target.name} #{transit.number}",
